@@ -37,6 +37,8 @@ type Client struct { Timeout time.Duration; BaseURL string }  // OK
 
 Group order: stdlib → internal → external, separated by blank line.
 
+When importing a package whose name doesn't match its namespace (last path segment), always use an explicit alias for clarity:
+
 ```go
 import (
     "context"
