@@ -5,6 +5,7 @@
 *.so
 *.dylib
 *.out
+bin/
 
 # Go workspace
 go.work
@@ -42,3 +43,5 @@ docs/
 .atl/
 .worktrees/
 .superpowers/
+
+ageva-historian-mcpserver
