@@ -5,7 +5,8 @@ import (
     "fmt"
 
     "github.com/chewcw/aveva-historian-mcpserver/internal/historian"
-    "github.com/chewcw/odata-query-builder"
+
+    odataqb "github.com/chewcw/odata-query-builder"
 )
 
 func GetTags(ctx context.Context, client *historian.Client, filter string, top, skip int) (*historian.ODataResponse[historian.Tag], error) {
@@ -21,7 +22,7 @@ func GetTags(ctx context.Context, client *historian.Client, filter string, top, 
     }
     var result historian.ODataResponse[historian.Tag]
     if err := client.Get(ctx, "Tags", q, &result); err != nil {
-        return nil, fmt.Errorf("tags query: %w", err)
+        return nil, fmt.Errorf("fetch tags: %w", err)
     }
     return &result, nil
 }

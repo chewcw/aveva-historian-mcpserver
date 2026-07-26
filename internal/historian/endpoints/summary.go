@@ -17,7 +17,7 @@ func GetAnalogSummary(ctx context.Context, client *historian.Client, fqn, startT
 	q += fmt.Sprintf("&$top=%d", top)
 	var result historian.ODataResponse[historian.AnalogSummaryValue]
 	if err := client.Get(ctx, "AnalogSummary", q, &result); err != nil {
-		return nil, fmt.Errorf("analog summary query: %w", err)
+		return nil, fmt.Errorf("fetch analog summary: %w", err)
 	}
 	return &result, nil
 }
