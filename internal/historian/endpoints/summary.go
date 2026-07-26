@@ -9,7 +9,7 @@ import (
 )
 
 func GetAnalogSummary(ctx context.Context, client *historian.Client, fqn, startTime, endTime string, resolutionMS, top int) (*historian.ODataResponse[historian.AnalogSummaryValue], error) {
-	filter := fmt.Sprintf("FQN eq '%s' and StartDateTime ge %s and EndDateTime ge %s", fqn, startTime, endTime)
+	filter := fmt.Sprintf("FQN eq '%s' and StartDateTime ge %s and EndDateTime le %s", fqn, startTime, endTime)
 	q := fmt.Sprintf("$filter=%s", url.QueryEscape(filter))
 	if resolutionMS > 0 {
 		q += fmt.Sprintf("&Resolution=%d", resolutionMS)

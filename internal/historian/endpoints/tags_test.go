@@ -27,7 +27,7 @@ func TestGetTagsQuery(t *testing.T) {
 		t.Fatal("result is nil")
 	}
 
-	want := "$filter=startswith(FQN,'CDE')&$top=10&$skip=0"
+	want := "$filter=startswith%28FQN%2C%27CDE%27%29&$top=10&$skip=0"
 	if rawQuery != want {
 		t.Errorf("raw query = %q, want %q", rawQuery, want)
 	}

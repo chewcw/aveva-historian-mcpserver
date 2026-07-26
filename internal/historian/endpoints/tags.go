@@ -3,6 +3,7 @@ package endpoints
 import (
     "context"
     "fmt"
+    "net/url"
 
     "github.com/chewcw/aveva-historian-mcpserver/internal/historian"
 
@@ -13,7 +14,7 @@ func GetTags(ctx context.Context, client *historian.Client, filter string, top, 
     qb := odataqb.New().Top(top).Skip(skip)
     q := qb.Build()
     if filter != "" {
-        filterParam := "$filter=" + filter
+        filterParam := "$filter=" + url.QueryEscape(filter)
         if q != "" {
             q = filterParam + "&" + q
         } else {

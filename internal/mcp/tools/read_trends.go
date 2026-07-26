@@ -79,7 +79,7 @@ func RegisterReadTrends(server *mcp.Server, client *historian.Client, logger *sl
 		if rows == nil {
 			rows = []historian.ProcessValue{}
 		}
-		capped := capRows(rows, 200)
+		capped := capRows(rows, 100)
 
 		var preview strings.Builder
 		preview.WriteString("| FQN | DateTime | Value | Quality | TagPath |\n")

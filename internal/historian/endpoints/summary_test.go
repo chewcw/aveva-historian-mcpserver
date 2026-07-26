@@ -28,7 +28,7 @@ func TestGetAnalogSummaryQuery(t *testing.T) {
 		t.Fatal("result is nil")
 	}
 
-	want := "$filter=FQN+eq+%27CDE.OEE%27+and+StartDateTime+ge+2024-01-01T00%3A00%3A00Z+and+EndDateTime+ge+2024-01-02T00%3A00%3A00Z&Resolution=3600000&$top=100"
+	want := "$filter=FQN+eq+%27CDE.OEE%27+and+StartDateTime+ge+2024-01-01T00%3A00%3A00Z+and+EndDateTime+le+2024-01-02T00%3A00%3A00Z&Resolution=3600000&$top=100"
 	if rawQuery != want {
 		t.Errorf("raw query = %q, want %q", rawQuery, want)
 	}
@@ -53,7 +53,7 @@ func TestGetAnalogSummaryMinimal(t *testing.T) {
 		t.Fatal("result is nil")
 	}
 
-	want := "$filter=FQN+eq+%27CDE.OEE%27+and+StartDateTime+ge+2024-01-01T00%3A00%3A00Z+and+EndDateTime+ge+2024-01-02T00%3A00%3A00Z&$top=100"
+	want := "$filter=FQN+eq+%27CDE.OEE%27+and+StartDateTime+ge+2024-01-01T00%3A00%3A00Z+and+EndDateTime+le+2024-01-02T00%3A00%3A00Z&$top=100"
 	if rawQuery != want {
 		t.Errorf("raw query = %q, want %q", rawQuery, want)
 	}

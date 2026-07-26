@@ -74,7 +74,7 @@ func RegisterReadAnalogSummary(server *mcp.Server, client *historian.Client, log
 		if rows == nil {
 			rows = []historian.AnalogSummaryValue{}
 		}
-		capped := capRows(rows, 200)
+		capped := capRows(rows, 100)
 
 		var preview strings.Builder
 		preview.WriteString("| FQN | StartDateTime | EndDateTime | Min | Max | Avg | StdDev | Count | TagPath |\n")

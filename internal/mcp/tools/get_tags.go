@@ -55,7 +55,7 @@ func RegisterGetTags(server *mcp.Server, client *historian.Client, logger *slog.
 		if rows == nil {
 			rows = []historian.Tag{}
 		}
-		capped := capRows(rows, 200)
+		capped := capRows(rows, 100)
 
 		var preview strings.Builder
 		preview.WriteString("| TagName | FQN | Type | Unit | Description |\n")
