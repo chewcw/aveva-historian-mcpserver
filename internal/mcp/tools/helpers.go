@@ -6,13 +6,16 @@ import (
 )
 
 // parseArgs unmarshals the raw JSON arguments from a CallToolRequest into a map.
-// Returns nil if Arguments is nil or empty.
+// Returns nil if Arguments is nil, empty, or unmarshals to an empty map.
 func parseArgs(req *mcp.CallToolRequest) map[string]any {
-	if req.Params.Arguments == nil || len(req.Params.Arguments) == 0 {
+	if req == nil || req.Params == nil || req.Params.Arguments == nil || len(req.Params.Arguments) == 0 {
 		return nil
 	}
 	var args map[string]any
 	if err := json.Unmarshal(req.Params.Arguments, &args); err != nil {
+		return nil
+	}
+	if len(args) == 0 {
 		return nil
 	}
 	return args
