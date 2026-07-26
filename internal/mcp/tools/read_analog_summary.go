@@ -18,28 +18,17 @@ func RegisterReadAnalogSummary(server *mcp.Server, client *historian.Client, log
 	inputSchema := map[string]any{
 		"type": "object",
 		"properties": map[string]any{
-			"tag_id": map[string]any{
-				"type":        "string",
-				"description": "Fully qualified tag name (FQN) to retrieve analog summary for",
-			},
-			"start_time": map[string]any{
-				"type":        "string",
-				"description": "Start time for the summary data (ISO 8601 format)",
-			},
-			"end_time": map[string]any{
-				"type":        "string",
-				"description": "End time for the summary data (ISO 8601 format)",
-			},
-			"resolution_ms": map[string]any{
-				"type":        "number",
-				"description": "Resolution in milliseconds for summary intervals",
-			},
-			"max_results": map[string]any{
-				"type":        "number",
-				"description": "Maximum number of summary records to return (default 100)",
+			"tag_id":     map[string]any{"type": "string", "description": "Tag FQN"},
+			"start_time": map[string]any{"type": "string", "description": "Start time"},
+			"end_time":   map[string]any{"type": "string", "description": "End time"},
+			"resolution_ms": map[string]any{"type": "number", "description": "Granularity in ms"},
+			"max_results":   map[string]any{"type": "number", "description": "Max rows (default 100)"},
+			"filters": map[string]any{
+				"type": "array",
+				"description": "Additional filter groups. Each: {\"and\":[...]} or {\"or\":[...]}",
+				"items": map[string]any{"type": "object"},
 			},
 		},
-		"required": []string{"tag_id", "start_time", "end_time"},
 	}
 
 	server.AddTool(&mcp.Tool{
@@ -48,21 +37,35 @@ func RegisterReadAnalogSummary(server *mcp.Server, client *historian.Client, log
 		InputSchema: inputSchema,
 	}, func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		args := parseArgs(req)
-		tagID := getStringArg(args, "tag_id")
-		startTime := getStringArg(args, "start_time")
-		endTime := getStringArg(args, "end_time")
+		var groups []types.FilterGroupDef
 
-		if tagID == "" || startTime == "" || endTime == "" {
-			return &mcp.CallToolResult{
-				IsError: true,
-				Content: []mcp.Content{&mcp.TextContent{Text: "tag_id, start_time, and end_time are required"}},
-			}, nil
+		tagID := getStringArg(args, "tag_id")
+		if tagID != "" {
+			groups = append(groups, types.FilterGroupDef{
+				And: []types.FilterCondition{{Field: "FQN", Operator: "eq", Value: tagID}},
+			})
 		}
 
-		resolutionMS := getIntArg(args, "resolution_ms", 0)
+		startTime := getStringArg(args, "start_time")
+		endTime := getStringArg(args, "end_time")
+		var timeConds []types.FilterCondition
+		if startTime != "" {
+			timeConds = append(timeConds, types.FilterCondition{Field: "StartDateTime", Operator: "ge", Value: startTime})
+		}
+		if endTime != "" {
+			timeConds = append(timeConds, types.FilterCondition{Field: "EndDateTime", Operator: "le", Value: endTime})
+		}
+		if len(timeConds) > 0 {
+			groups = append(groups, types.FilterGroupDef{And: timeConds})
+		}
+
+		userFilters := parseFilters(args["filters"])
+		groups = append(groups, userFilters...)
+
+		resolutionMS := getIntArg(args, "resolution_ms", 3600000)
 		maxResults := getIntArg(args, "max_results", 100)
 
-		result, err := endpoints.GetAnalogSummary(ctx, client, tagID, startTime, endTime, resolutionMS, maxResults)
+		result, err := endpoints.GetAnalogSummary(ctx, client, groups, resolutionMS, maxResults)
 		if err != nil {
 			return &mcp.CallToolResult{
 				IsError: true,

@@ -18,18 +18,39 @@ func RegisterGetTags(server *mcp.Server, client *historian.Client, logger *slog.
 	inputSchema := map[string]any{
 		"type": "object",
 		"properties": map[string]any{
-			"filter": map[string]any{
-				"type":        "string",
-				"description": "OData $filter expression to narrow the tag list",
+			"filters": map[string]any{
+				"type": "array",
+				"description": "Filter groups with AND/OR conditions. Each group: {\"and\":[...]} or {\"or\":[...]}, each condition: {\"field\":\"...\", \"operator\":\"eq|ne|gt|ge|lt|le|startsWith|endsWith|contains|in|has\", \"value\":...}",
+				"items": map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"and": map[string]any{
+							"type": "array",
+							"items": map[string]any{
+								"type": "object",
+								"properties": map[string]any{
+									"field":    map[string]any{"type": "string"},
+									"operator": map[string]any{"type": "string"},
+									"value":    map[string]any{},
+								},
+							},
+						},
+						"or": map[string]any{
+							"type": "array",
+							"items": map[string]any{
+								"type": "object",
+								"properties": map[string]any{
+									"field":    map[string]any{"type": "string"},
+									"operator": map[string]any{"type": "string"},
+									"value":    map[string]any{},
+								},
+							},
+						},
+					},
+				},
 			},
-			"top": map[string]any{
-				"type":        "number",
-				"description": "Maximum number of tags to return (default 50)",
-			},
-			"skip": map[string]any{
-				"type":        "number",
-				"description": "Number of tags to skip for pagination (default 0)",
-			},
+			"top": map[string]any{"type": "number", "description": "Max rows (default 50)"},
+			"skip": map[string]any{"type": "number", "description": "Rows to skip (default 0)"},
 		},
 	}
 
@@ -39,11 +60,11 @@ func RegisterGetTags(server *mcp.Server, client *historian.Client, logger *slog.
 		InputSchema: inputSchema,
 	}, func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		args := parseArgs(req)
-		filter := getStringArg(args, "filter")
+		filters := parseFilters(args["filters"])
 		top := getIntArg(args, "top", 50)
 		skip := getIntArg(args, "skip", 0)
 
-		result, err := endpoints.GetTags(ctx, client, filter, top, skip)
+		result, err := endpoints.GetTags(ctx, client, filters, top, skip)
 		if err != nil {
 			return &mcp.CallToolResult{
 				IsError: true,

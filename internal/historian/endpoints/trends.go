@@ -3,21 +3,27 @@ package endpoints
 import (
 	"context"
 	"fmt"
-	"net/url"
 
 	"github.com/chewcw/aveva-historian-mcpserver/internal/historian"
+	"github.com/chewcw/aveva-historian-mcpserver/internal/types"
+	odataqb "github.com/chewcw/odata-query-builder"
 )
 
-func GetProcessValues(ctx context.Context, client *historian.Client, fqn, startTime, endTime, retrievalMode string, resolutionMS, top int) (*historian.ODataResponse[historian.ProcessValue], error) {
-	filter := fmt.Sprintf("FQN eq '%s' and DateTime ge %s and DateTime le %s", fqn, startTime, endTime)
-	q := fmt.Sprintf("$filter=%s", url.QueryEscape(filter))
+func GetProcessValues(ctx context.Context, client *historian.Client, groups []types.FilterGroupDef, retrievalMode string, resolutionMS, top int) (*historian.ODataResponse[historian.ProcessValue], error) {
+	qb := odataqb.New().Top(top)
+	applyFilterGroups(qb, groups)
+	q := qb.Build()
+
+	// Append custom AVEVA params not supported by odataqb
 	if retrievalMode != "" {
-		q += fmt.Sprintf("&RetrievalMode=%s", url.QueryEscape(retrievalMode))
+		if q != "" { q += "&" }
+		q += "RetrievalMode=" + retrievalMode
 	}
 	if resolutionMS > 0 {
-		q += fmt.Sprintf("&Resolution=%d", resolutionMS)
+		if q != "" { q += "&" }
+		q += fmt.Sprintf("Resolution=%d", resolutionMS)
 	}
-	q += fmt.Sprintf("&$top=%d", top)
+
 	var result historian.ODataResponse[historian.ProcessValue]
 	if err := client.Get(ctx, "ProcessValues", q, &result); err != nil {
 		return nil, fmt.Errorf("fetch process values: %w", err)

@@ -3,6 +3,8 @@ package tools
 import (
 	"encoding/json"
 
+	"github.com/chewcw/aveva-historian-mcpserver/internal/types"
+
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -57,4 +59,53 @@ func capRows[T any](rows []T, max int) []T {
 		return rows[:max]
 	}
 	return rows
+}
+
+// parseFilters converts a raw JSON value (from tool args) into structured filter groups.
+func parseFilters(raw any) []types.FilterGroupDef {
+	arr, ok := raw.([]any)
+	if !ok {
+		return nil
+	}
+	var groups []types.FilterGroupDef
+	for _, item := range arr {
+		m, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		var g types.FilterGroupDef
+		if andArr, ok := m["and"].([]any); ok {
+			for _, cond := range andArr {
+				g.And = append(g.And, parseCondition(cond))
+			}
+		}
+		if orArr, ok := m["or"].([]any); ok {
+			for _, cond := range orArr {
+				g.Or = append(g.Or, parseCondition(cond))
+			}
+		}
+		groups = append(groups, g)
+	}
+	return groups
+}
+
+func parseCondition(raw any) types.FilterCondition {
+	m, ok := raw.(map[string]any)
+	if !ok {
+		return types.FilterCondition{}
+	}
+	return types.FilterCondition{
+		Field:    stringField(m, "field"),
+		Operator: stringField(m, "operator"),
+		Value:    m["value"],
+	}
+}
+
+func stringField(m map[string]any, key string) string {
+	if v, ok := m[key]; ok {
+		if s, ok := v.(string); ok {
+			return s
+		}
+	}
+	return ""
 }

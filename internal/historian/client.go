@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/Azure/go-ntlmssp"
@@ -38,11 +39,12 @@ func New(baseURL, username, password string, logger *slog.Logger) *Client {
 }
 
 func (c *Client) Get(ctx context.Context, path, query string, dest any) error {
-	full := fmt.Sprintf("%s/Historian/v2/%s?%s", c.baseURL, path, query)
+	full := fmt.Sprintf("%s/Historian/v2/%s", c.baseURL, path)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, full, nil)
 	if err != nil {
 		return fmt.Errorf("create request: %w", err)
 	}
+	req.URL.RawQuery = urlEncodeQueryValues(query)
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := c.httpClient.Do(req)
@@ -80,4 +82,24 @@ type ntlmsspWrapper struct {
 func (w *ntlmsspWrapper) RoundTrip(req *http.Request) (*http.Response, error) {
 	req.SetBasicAuth(w.username, w.password)
 	return w.inner.RoundTrip(req)
+}
+
+// urlEncodeQueryValues URL-encodes the values in a raw query string while preserving
+// the key=value structure and & separators. Needed because odataqb produces
+// query strings with unencoded special characters (spaces, parens, quotes).
+func urlEncodeQueryValues(rawQuery string) string {
+	if rawQuery == "" {
+		return ""
+	}
+	parts := strings.Split(rawQuery, "&")
+	for i, p := range parts {
+		eqIdx := strings.IndexByte(p, '=')
+		if eqIdx < 0 {
+			continue
+		}
+		key := p[:eqIdx]
+		val := p[eqIdx+1:]
+		parts[i] = key + "=" + url.QueryEscape(val)
+	}
+	return strings.Join(parts, "&")
 }

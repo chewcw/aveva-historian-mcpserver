@@ -1,4 +1,4 @@
-.PHONY: build run test lint clean cross
+.PHONY: build run test lint clean cross inspector
 
 build:
 	go build -o bin/aveva-historian-mcp ./cmd/server
@@ -17,3 +17,6 @@ clean:
 
 cross:
 	GOOS=windows GOARCH=amd64 go build -o bin/aveva-historian-mcp.exe ./cmd/server
+
+inspector: build
+	npx -y @modelcontextprotocol/inspector npx /home/ccw/Documents/code/rnd/aveva-historian-mcpserver/.worktrees/feat/phase1-foundation/bin/aveva-historian-mcp

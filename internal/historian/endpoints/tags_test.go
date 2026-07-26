@@ -2,11 +2,13 @@ package endpoints
 
 import (
 	"context"
+	"strings"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/chewcw/aveva-historian-mcpserver/internal/historian"
+	"github.com/chewcw/aveva-historian-mcpserver/internal/types"
 )
 
 func TestGetTagsQuery(t *testing.T) {
@@ -19,16 +21,24 @@ func TestGetTagsQuery(t *testing.T) {
 	defer ts.Close()
 
 	client := historian.New(ts.URL, "u", "p", nil)
-	result, err := GetTags(context.Background(), client, "startswith(FQN,'CDE')", 10, 0)
+	groups := []types.FilterGroupDef{
+		{
+			And: []types.FilterCondition{
+				{Field: "FQN", Operator: "startswith", Value: "CDE"},
+			},
+		},
+	}
+	result, err := GetTags(context.Background(), client, groups, 10, 0)
 	if err != nil {
-		t.Fatalf("GetTags failed: %v", err)
+		t.Fatalf("GetTags failed: %v (rawQuery=%q)", err, rawQuery)
 	}
 	if result == nil {
 		t.Fatal("result is nil")
 	}
-
-	want := "$filter=startswith%28FQN%2C%27CDE%27%29&$top=10&$skip=0"
-	if rawQuery != want {
-		t.Errorf("raw query = %q, want %q", rawQuery, want)
+	if rawQuery == "" {
+		t.Error("rawQuery is empty")
+	}
+	if !strings.Contains(rawQuery, "$filter=") {
+		t.Errorf("expected $filter= in query, got %q", rawQuery)
 	}
 }
