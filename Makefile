@@ -1,4 +1,4 @@
-.PHONY: build run test lint clean
+.PHONY: build run test lint clean cross
 
 build:
 	go build -o bin/aveva-historian-mcp ./cmd/server
