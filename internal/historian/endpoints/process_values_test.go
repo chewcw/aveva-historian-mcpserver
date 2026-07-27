@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -27,12 +28,13 @@ func TestGetProcessValuesQuery(t *testing.T) {
 			{Field: "DateTime", Operator: "ge", Value: "2024-01-01T00:00:00Z"},
 			{Field: "DateTime", Operator: "le", Value: "2024-01-02T00:00:00Z"},
 		}},
+		{And: []types.FilterCondition{
+			{Field: "RetrievalMode", Operator: "eq", Value: "Interpolated"},
+			{Field: "Resolution", Operator: "eq", Value: 3600000},
+		}},
 	}
-	extra := ProcessValuesParams{
-		RetrievalMode: strPtr("Interpolated"),
-		ResolutionMS:  intPtr(3600000),
-	}
-	result, err := GetProcessValues(context.Background(), client, groups, 100, extra)
+	top := 100
+	result, err := GetProcessValues(context.Background(), client, groups, types.QueryOptions{Top: &top})
 	if err != nil {
 		t.Fatalf("GetProcessValues failed: %v", err)
 	}
@@ -40,14 +42,15 @@ func TestGetProcessValuesQuery(t *testing.T) {
 		t.Fatal("result is nil")
 	}
 
-	if rawQuery == "" {
-		t.Error("rawQuery is empty")
+	if !strings.Contains(rawQuery, "$filter") {
+		t.Errorf("rawQuery missing $filter: %s", rawQuery)
 	}
-	if !strings.Contains(rawQuery, "RetrievalMode=Interpolated") {
-		t.Errorf("rawQuery missing RetrievalMode=Interpolated: %s", rawQuery)
+	decoded, _ := url.QueryUnescape(rawQuery)
+	if !strings.Contains(decoded, "RetrievalMode eq 'Interpolated'") {
+		t.Errorf("rawQuery missing RetrievalMode filter: %s", rawQuery)
 	}
-	if !strings.Contains(rawQuery, "Resolution=3600000") {
-		t.Errorf("rawQuery missing Resolution=3600000: %s", rawQuery)
+	if !strings.Contains(decoded, "Resolution eq 3600000") {
+		t.Errorf("rawQuery missing Resolution filter: %s", rawQuery)
 	}
 }
 
@@ -62,7 +65,8 @@ func TestGetProcessValuesMinimal(t *testing.T) {
 
 	client := historian.New(ts.URL, "u", "p", nil)
 	// No filters, no params — just $top
-	result, err := GetProcessValues(context.Background(), client, nil, 100, ProcessValuesParams{})
+	top := 100
+	result, err := GetProcessValues(context.Background(), client, nil, types.QueryOptions{Top: &top})
 	if err != nil {
 		t.Fatalf("GetProcessValues failed: %v", err)
 	}

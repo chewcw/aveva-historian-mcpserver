@@ -3,6 +3,7 @@ package tools
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/chewcw/aveva-historian-mcpserver/internal/types"
 
@@ -191,4 +192,63 @@ func intPtrStr(p *int) string {
 		return ""
 	}
 	return fmt.Sprintf("%d", *p)
+}
+
+// getStringSliceArg returns []string from a JSON array arg, or nil if missing or not an array.
+func getStringSliceArg(args map[string]any, name string) []string {
+	if args == nil {
+		return nil
+	}
+	v, ok := args[name]
+	if !ok {
+		return nil
+	}
+	raw, ok := v.([]any)
+	if !ok {
+		return nil
+	}
+	strs := make([]string, 0, len(raw))
+	for _, item := range raw {
+		if s, ok := item.(string); ok {
+			strs = append(strs, s)
+		}
+	}
+	return strs
+}
+
+// parseOrderByClauses parses an array of {"field": ..., "direction": ...} objects.
+// Returns nil (zero value) if missing or not a valid array.
+func parseOrderByClauses(args map[string]any, name string) []types.OrderByClause {
+	if args == nil {
+		return nil
+	}
+	v, ok := args[name]
+	if !ok {
+		return nil
+	}
+	raw, ok := v.([]any)
+	if !ok {
+		return nil
+	}
+	result := make([]types.OrderByClause, 0, len(raw))
+	for _, item := range raw {
+		obj, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		field, _ := obj["field"].(string)
+		if field == "" {
+			continue
+		}
+		dirStr, _ := obj["direction"].(string)
+		var d types.OrderDirection
+		switch strings.ToLower(dirStr) {
+		case "desc":
+			d = types.OrderDesc
+		default:
+			d = types.OrderAsc
+		}
+		result = append(result, types.OrderByClause{Field: field, Direction: d})
+	}
+	return result
 }
