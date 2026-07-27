@@ -4,7 +4,7 @@ go 1.26.5
 
 require (
 	github.com/Azure/go-ntlmssp v0.1.1
-	github.com/chewcw/odata-query-builder v0.1.1
+	github.com/chewcw/odata-query-builder v0.1.2
 	github.com/google/uuid v1.6.0
 	github.com/modelcontextprotocol/go-sdk v1.6.1
 )

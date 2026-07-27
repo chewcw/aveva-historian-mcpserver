@@ -119,23 +119,20 @@ func TestODataResponseUnmarshalAnalogSummary(t *testing.T) {
 	if sv.EndDateTime != "2025-01-15T23:59:59Z" {
 		t.Errorf("EndDateTime = %q", sv.EndDateTime)
 	}
-	if sv.Minimum != 0.1 {
+	if sv.Minimum == nil || *sv.Minimum != 0.1 {
 		t.Errorf("Minimum = %v", sv.Minimum)
 	}
-	if sv.Maximum != 9.9 {
+	if sv.Maximum == nil || *sv.Maximum != 9.9 {
 		t.Errorf("Maximum = %v", sv.Maximum)
 	}
-	if sv.Average != 5.0 {
+	if sv.Average == nil || *sv.Average != 5.0 {
 		t.Errorf("Average = %v", sv.Average)
 	}
-	if sv.StdDev != 2.5 {
+	if sv.StdDev == nil || *sv.StdDev != 2.5 {
 		t.Errorf("StdDev = %v", sv.StdDev)
 	}
-	if sv.Count != 86400 {
+	if sv.Count == nil || *sv.Count != 86400 {
 		t.Errorf("Count = %d", sv.Count)
-	}
-	if sv.TagPath != "\\PATH\\SINUSOID" {
-		t.Errorf("TagPath = %q", sv.TagPath)
 	}
 }
 

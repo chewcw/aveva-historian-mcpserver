@@ -23,6 +23,27 @@ func RegisterReadAnalogSummary(server *mcp.Server, client *historian.Client, log
 			"end_time":      map[string]any{"type": "string", "description": "End time"},
 			"resolution_ms": map[string]any{"type": "number", "description": "Granularity in ms"},
 			"max_results":   map[string]any{"type": "number", "description": "Max rows (default 100)"},
+			"retrieval_mode": map[string]any{
+				"type":        "string",
+				"enum":        []string{"Cyclic", "Full"},
+				"description": "Retrieval mode: Cyclic (default) or Full",
+			},
+			"slice_by": map[string]any{
+				"type":        "string",
+				"description": "Comma-separated FQNs (max 10) for dynamic cycle computation",
+			},
+			"slice_by_value": map[string]any{
+				"type":        "string",
+				"description": "Filter criterion for SliceBy results",
+			},
+			"opc_quality": map[string]any{
+				"type":        "integer",
+				"description": "OPC quality filter (Int32)",
+			},
+			"percent_good": map[string]any{
+				"type":        "number",
+				"description": "Percent good threshold (0-100)",
+			},
 			"filters": map[string]any{
 				"type":        "array",
 				"description": "Additional Filters using OData expressions. Array of groups (AND-combined across groups). Each group has \"and\" or \"or\" with conditions. Condition: {\"field\":\"...\", \"operator\":\"...\", \"value\":...}. Operators: eq,ne,gt,ge,lt,le (str|num), startsWith,endsWith,contains (str), in (array), has (str). Example: [{\"and\":[{\"field\":\"FQN\",\"operator\":\"startsWith\",\"value\":\"CDE\"}]}] -> startswith(FQN,CDE)",
@@ -72,8 +93,13 @@ func RegisterReadAnalogSummary(server *mcp.Server, client *historian.Client, log
 	}
 
 	server.AddTool(&mcp.Tool{
-		Name:        "read_analog_summary",
-		Description: "Retrieve analog summary statistics for a historian tag over a time range",
+		Name: "read_analog_summary",
+		Description: "Retrieve analog summary statistics for historian tags over a time range. " +
+			"Returns per-cycle statistics: Min, Max, Avg, StdDev, Integral, Count, " +
+			"First, Last, OPCQuality, PercentGood with timestamps. " +
+			"Optional: retrieval_mode (Cyclic|Full), slice_by (comma-sep FQNs), " +
+			"slice_by_value, opc_quality, percent_good. " +
+			"Note: do not URL-encode param values — client handles encoding automatically.",
 		InputSchema: inputSchema,
 	}, func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		args := parseArgs(req)
@@ -105,7 +131,15 @@ func RegisterReadAnalogSummary(server *mcp.Server, client *historian.Client, log
 		resolutionMS := getIntArg(args, "resolution_ms", 3600000)
 		maxResults := getIntArg(args, "max_results", 100)
 
-		result, err := endpoints.GetAnalogSummary(ctx, client, groups, resolutionMS, maxResults)
+		extraParams := endpoints.AnalogSummaryParams{
+			RetrievalMode: getOptionalStringArg(args, "retrieval_mode"),
+			SliceBy:       getOptionalStringArg(args, "slice_by"),
+			SliceByValue:  getOptionalStringArg(args, "slice_by_value"),
+			OPCQuality:    getOptionalIntArg(args, "opc_quality"),
+			PercentGood:   getOptionalFloatArg(args, "percent_good"),
+		}
+
+		result, err := endpoints.GetAnalogSummary(ctx, client, groups, resolutionMS, maxResults, extraParams)
 		if err != nil {
 			return &mcp.CallToolResult{
 				IsError: true,
@@ -120,11 +154,15 @@ func RegisterReadAnalogSummary(server *mcp.Server, client *historian.Client, log
 		capped := capRows(rows, 100)
 
 		var preview strings.Builder
-		preview.WriteString("| FQN | StartDateTime | EndDateTime | Min | Max | Avg | StdDev | Count | TagPath |\n")
-		preview.WriteString("|-----|--------------|------------|-----|-----|-----|-------|-------|--------|\n")
+		preview.WriteString("| FQN | StartDateTime | EndDateTime | Min | Max | Avg | StdDev | Integral | Count | First | Last |\n")
+		preview.WriteString("|-----|--------------|------------|-----|-----|-----|-------|---------|-------|-------|------|\n")
 		for _, s := range capped {
-			fmt.Fprintf(&preview, "| %s | %s | %s | %g | %g | %g | %g | %d | %s |\n",
-				s.FQN, s.StartDateTime, s.EndDateTime, s.Minimum, s.Maximum, s.Average, s.StdDev, s.Count, s.TagPath)
+			fmt.Fprintf(&preview, "| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |\n",
+				s.FQN, s.StartDateTime, s.EndDateTime,
+				floatPtrStr(s.Minimum), floatPtrStr(s.Maximum),
+				floatPtrStr(s.Average), floatPtrStr(s.StdDev),
+				floatPtrStr(s.Integral), intPtrStr(s.Count),
+				floatPtrStr(s.First), floatPtrStr(s.Last))
 		}
 
 		resourceURI := fmt.Sprintf("historians://%s/summary/%s", client.BaseURL(), uuid.New().String())

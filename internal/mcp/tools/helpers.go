@@ -2,6 +2,7 @@ package tools
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/chewcw/aveva-historian-mcpserver/internal/types"
 
@@ -108,4 +109,70 @@ func stringField(m map[string]any, key string) string {
 		}
 	}
 	return ""
+}
+
+// getOptionalStringArg returns a *string pointer, or nil if arg is missing or not a string.
+func getOptionalStringArg(args map[string]any, name string) *string {
+	if args == nil {
+		return nil
+	}
+	v, ok := args[name]
+	if !ok {
+		return nil
+	}
+	s, ok := v.(string)
+	if !ok {
+		return nil
+	}
+	return &s
+}
+
+// getOptionalIntArg returns a *int pointer, or nil if arg is missing or not numeric.
+func getOptionalIntArg(args map[string]any, name string) *int {
+	if args == nil {
+		return nil
+	}
+	v, ok := args[name]
+	if !ok {
+		return nil
+	}
+	// json.Unmarshal into map[string]any decodes numbers as float64
+	f, ok := v.(float64)
+	if !ok {
+		return nil
+	}
+	i := int(f)
+	return &i
+}
+
+// getOptionalFloatArg returns a *float64 pointer, or nil if arg is missing or not numeric.
+func getOptionalFloatArg(args map[string]any, name string) *float64 {
+	if args == nil {
+		return nil
+	}
+	v, ok := args[name]
+	if !ok {
+		return nil
+	}
+	f, ok := v.(float64)
+	if !ok {
+		return nil
+	}
+	return &f
+}
+
+// floatPtrStr returns the formatted float64 value, or "" if p is nil.
+func floatPtrStr(p *float64) string {
+	if p == nil {
+		return ""
+	}
+	return fmt.Sprintf("%g", *p)
+}
+
+// intPtrStr returns the formatted int value, or "" if p is nil.
+func intPtrStr(p *int) string {
+	if p == nil {
+		return ""
+	}
+	return fmt.Sprintf("%d", *p)
 }

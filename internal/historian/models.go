@@ -28,13 +28,25 @@ type ProcessValue struct {
 
 // AnalogSummaryValue represents an analog summary over a time range.
 type AnalogSummaryValue struct {
-	FQN           string  `json:"FQN"`
-	StartDateTime string  `json:"StartDateTime"`
-	EndDateTime   string  `json:"EndDateTime"`
-	Minimum       float64 `json:"Minimum,omitempty"`
-	Maximum       float64 `json:"Maximum,omitempty"`
-	Average       float64 `json:"Average,omitempty"`
-	StdDev        float64 `json:"StandardDeviation,omitempty"`
-	Count         int     `json:"Count,omitempty"`
-	TagPath       string  `json:"TagPath,omitempty"`
+	FQN            string   `json:"FQN"`
+	StartDateTime  string   `json:"StartDateTime"`
+	EndDateTime    string   `json:"EndDateTime"`
+	RetrievalMode  string   `json:"RetrievalMode,omitempty"`
+	Resolution     *int     `json:"Resolution,omitempty"`
+	SliceBy        string   `json:"SliceBy,omitempty"`
+	SliceByValue   string   `json:"SliceByValue,omitempty"`
+	OPCQuality     *int     `json:"OPCQuality,omitempty"`
+	PercentGood    *float64 `json:"PercentGood,omitempty"`
+	First          *float64 `json:"First,omitempty"`
+	FirstDateTime  string   `json:"FirstDateTime,omitempty"`
+	Last           *float64 `json:"Last,omitempty"`
+	LastDateTime   string   `json:"LastDateTime,omitempty"`
+	Minimum        *float64 `json:"Minimum,omitempty"`
+	MinDateTime    string   `json:"MinDateTime,omitempty"`
+	Maximum        *float64 `json:"Maximum,omitempty"`
+	MaxDateTime    string   `json:"MaxDateTime,omitempty"`
+	Average        *float64 `json:"Average,omitempty"`
+	StdDev         *float64 `json:"StandardDeviation,omitempty"`
+	Integral       *float64 `json:"Integral,omitempty"`
+	Count          *int     `json:"Count,omitempty"`
 }
