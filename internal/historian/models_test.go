@@ -10,7 +10,7 @@ func TestODataResponseUnmarshalTags(t *testing.T) {
 		"@odata.context": "https://server/odata/$metadata#Tags",
 		"@odata.count": 2,
 		"value": [
-			{"Id": 101, "TagName": "SINUSOID", "FQN": "SINUSOID", "TagType": "AI", "Unit": "DEG C", "Description": "Sine wave tag"}
+			{"TagName": "SINUSOID", "FQN": "SINUSOID", "TagType": "AI", "EngUnit": "DEG C", "Source": "Manual", "EngUnitMax": 100.0, "EngUnitMin": 0.0, "InterpolationType": "Linear", "IntegralDivisor": 1.0, "RolloverValue": 999.9, "MessageOff": "LOW", "MessageOn": "HIGH", "Alias": "SINE", "Location": "Lab", "Description": "Sine wave tag"}
 		]
 	}`
 	var resp ODataResponse[Tag]
@@ -27,9 +27,6 @@ func TestODataResponseUnmarshalTags(t *testing.T) {
 		t.Fatalf("len(Value) = %d, want 1", len(resp.Value))
 	}
 	tag := resp.Value[0]
-	if tag.ID != 101 {
-		t.Errorf("ID = %d, want 101", tag.ID)
-	}
 	if tag.TagName != "SINUSOID" {
 		t.Errorf("TagName = %q, want %q", tag.TagName, "SINUSOID")
 	}
@@ -39,8 +36,38 @@ func TestODataResponseUnmarshalTags(t *testing.T) {
 	if tag.TagType != "AI" {
 		t.Errorf("TagType = %q, want %q", tag.TagType, "AI")
 	}
-	if tag.Unit != "DEG C" {
-		t.Errorf("Unit = %q, want %q", tag.Unit, "DEG C")
+	if tag.EngUnit != "DEG C" {
+		t.Errorf("EngUnit = %q, want %q", tag.EngUnit, "DEG C")
+	}
+	if tag.Source != "Manual" {
+		t.Errorf("Source = %q, want %q", tag.Source, "Manual")
+	}
+	if tag.EngUnitMax == nil || *tag.EngUnitMax != 100.0 {
+		t.Errorf("EngUnitMax = %v, want 100.0", tag.EngUnitMax)
+	}
+	if tag.EngUnitMin == nil || *tag.EngUnitMin != 0.0 {
+		t.Errorf("EngUnitMin = %v, want 0.0", tag.EngUnitMin)
+	}
+	if tag.InterpolationType != "Linear" {
+		t.Errorf("InterpolationType = %q, want %q", tag.InterpolationType, "Linear")
+	}
+	if tag.IntegralDivisor == nil || *tag.IntegralDivisor != 1.0 {
+		t.Errorf("IntegralDivisor = %v, want 1.0", tag.IntegralDivisor)
+	}
+	if tag.RolloverValue == nil || *tag.RolloverValue != 999.9 {
+		t.Errorf("RolloverValue = %v, want 999.9", tag.RolloverValue)
+	}
+	if tag.MessageOff != "LOW" {
+		t.Errorf("MessageOff = %q, want %q", tag.MessageOff, "LOW")
+	}
+	if tag.MessageOn != "HIGH" {
+		t.Errorf("MessageOn = %q, want %q", tag.MessageOn, "HIGH")
+	}
+	if tag.Alias != "SINE" {
+		t.Errorf("Alias = %q, want %q", tag.Alias, "SINE")
+	}
+	if tag.Location != "Lab" {
+		t.Errorf("Location = %q, want %q", tag.Location, "Lab")
 	}
 	if tag.Description != "Sine wave tag" {
 		t.Errorf("Description = %q, want %q", tag.Description, "Sine wave tag")

@@ -9,12 +9,21 @@ type ODataResponse[T any] struct {
 
 // Tag represents a historian tag/point.
 type Tag struct {
-	ID          int    `json:"Id"`
 	TagName     string `json:"TagName"`
 	FQN         string `json:"FQN"`
 	TagType     string `json:"TagType"`
-	Unit        string `json:"Unit,omitempty"`
-	Description string `json:"Description,omitempty"`
+	EngUnit     string `json:"EngUnit,omitempty"`
+	Source      string   `json:"Source,omitempty"`
+	EngUnitMax        *float64 `json:"EngUnitMax,omitempty"`
+	EngUnitMin        *float64 `json:"EngUnitMin,omitempty"`
+	InterpolationType string   `json:"InterpolationType,omitempty"`
+	IntegralDivisor   *float64 `json:"IntegralDivisor,omitempty"`
+	RolloverValue     *float64 `json:"RolloverValue,omitempty"`
+	MessageOff        string   `json:"MessageOff,omitempty"`
+	MessageOn         string   `json:"MessageOn,omitempty"`
+	Alias             string   `json:"Alias,omitempty"`
+	Location          string   `json:"Location,omitempty"`
+	Description       string   `json:"Description,omitempty"`
 }
 
 // ProcessValue represents a timestamped process value.
