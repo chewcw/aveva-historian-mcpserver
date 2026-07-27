@@ -19,11 +19,12 @@ type Tag struct {
 
 // ProcessValue represents a timestamped process value.
 type ProcessValue struct {
-	FQN      string  `json:"FQN"`
-	DateTime string  `json:"DateTime"`
-	Value    float64 `json:"Value,omitempty"`
-	Quality  string  `json:"Quality,omitempty"`
-	TagPath  string  `json:"TagPath,omitempty"`
+	FQN        string   `json:"FQN"`
+	DateTime   string   `json:"DateTime"`
+	Value      *float64 `json:"Value,omitempty"`
+	OpcQuality *int     `json:"OpcQuality,omitempty"`
+	Text       *string  `json:"Text,omitempty"`
+	Unit       string   `json:"Unit,omitempty"`
 }
 
 // AnalogSummaryValue represents an analog summary over a time range.

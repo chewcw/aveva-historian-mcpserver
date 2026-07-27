@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/chewcw/aveva-historian-mcpserver/internal/historian"
@@ -27,7 +28,11 @@ func TestGetProcessValuesQuery(t *testing.T) {
 			{Field: "DateTime", Operator: "le", Value: "2024-01-02T00:00:00Z"},
 		}},
 	}
-	result, err := GetProcessValues(context.Background(), client, groups, "Interpolated", 3600000, 100)
+	extra := ProcessValuesParams{
+		RetrievalMode: strPtr("Interpolated"),
+		ResolutionMS:  intPtr(3600000),
+	}
+	result, err := GetProcessValues(context.Background(), client, groups, 100, extra)
 	if err != nil {
 		t.Fatalf("GetProcessValues failed: %v", err)
 	}
@@ -35,10 +40,14 @@ func TestGetProcessValuesQuery(t *testing.T) {
 		t.Fatal("result is nil")
 	}
 
-	// Verify filter portion (RetrievalMode and Resolution are appended after Build())
-	// odataqb generates: $filter=FQN eq 'CDE.OEE' and (DateTime ge '2024-01-01T00:00:00Z' and DateTime le '2024-01-02T00:00:00Z')
 	if rawQuery == "" {
 		t.Error("rawQuery is empty")
+	}
+	if !strings.Contains(rawQuery, "RetrievalMode=Interpolated") {
+		t.Errorf("rawQuery missing RetrievalMode=Interpolated: %s", rawQuery)
+	}
+	if !strings.Contains(rawQuery, "Resolution=3600000") {
+		t.Errorf("rawQuery missing Resolution=3600000: %s", rawQuery)
 	}
 }
 
@@ -52,8 +61,8 @@ func TestGetProcessValuesMinimal(t *testing.T) {
 	defer ts.Close()
 
 	client := historian.New(ts.URL, "u", "p", nil)
-	// No filters, no retrieval mode, no resolution — just $top
-	result, err := GetProcessValues(context.Background(), client, nil, "", 0, 100)
+	// No filters, no params — just $top
+	result, err := GetProcessValues(context.Background(), client, nil, 100, ProcessValuesParams{})
 	if err != nil {
 		t.Fatalf("GetProcessValues failed: %v", err)
 	}
@@ -66,3 +75,7 @@ func TestGetProcessValuesMinimal(t *testing.T) {
 		t.Errorf("raw query = %q, want %q", rawQuery, want)
 	}
 }
+
+func strPtr(s string) *string { return &s }
+
+func intPtr(i int) *int { return &i }

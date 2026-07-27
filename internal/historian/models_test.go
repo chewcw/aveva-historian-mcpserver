@@ -51,7 +51,7 @@ func TestODataResponseUnmarshalProcessValues(t *testing.T) {
 	raw := `{
 		"@odata.context": "https://server/odata/$metadata#InterpolatedData",
 		"value": [
-			{"FQN": "SINUSOID", "DateTime": "2025-01-15T12:00:00Z", "Value": 1.23, "Quality": "Good", "TagPath": "\\PATH\\SINUSOID"}
+			{"FQN": "SINUSOID", "DateTime": "2025-01-15T12:00:00Z", "Value": 1.23, "OpcQuality": 192, "Text": "1.23", "Unit": "DEG C"}
 		]
 	}`
 	var resp ODataResponse[ProcessValue]
@@ -74,14 +74,17 @@ func TestODataResponseUnmarshalProcessValues(t *testing.T) {
 	if pv.DateTime != "2025-01-15T12:00:00Z" {
 		t.Errorf("DateTime = %q", pv.DateTime)
 	}
-	if pv.Value != 1.23 {
+	if pv.Value == nil || *pv.Value != 1.23 {
 		t.Errorf("Value = %v, want 1.23", pv.Value)
 	}
-	if pv.Quality != "Good" {
-		t.Errorf("Quality = %q", pv.Quality)
+	if pv.OpcQuality == nil || *pv.OpcQuality != 192 {
+		t.Errorf("OpcQuality = %v, want 192", pv.OpcQuality)
 	}
-	if pv.TagPath != "\\PATH\\SINUSOID" {
-		t.Errorf("TagPath = %q", pv.TagPath)
+	if pv.Text == nil || *pv.Text != "1.23" {
+		t.Errorf("Text = %v, want 1.23", pv.Text)
+	}
+	if pv.Unit != "DEG C" {
+		t.Errorf("Unit = %q, want %q", pv.Unit, "DEG C")
 	}
 }
 

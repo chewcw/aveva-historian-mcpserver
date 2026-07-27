@@ -13,7 +13,7 @@ import (
 func NewServer(cfg *config.Config, client *historian.Client, logger *slog.Logger) *mcp.Server {
 	server := mcp.NewServer(&mcp.Implementation{Name: cfg.ServerName}, nil)
 	tools.RegisterGetTags(server, client, logger)
-	tools.RegisterReadTrends(server, client, logger)
+	tools.RegisterReadProcessValues(server, client, logger)
 	tools.RegisterReadAnalogSummary(server, client, logger)
 	return server
 }

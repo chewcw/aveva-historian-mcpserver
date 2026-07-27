@@ -14,13 +14,13 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-func RegisterReadTrends(server *mcp.Server, client *historian.Client, logger *slog.Logger) {
+func RegisterReadProcessValues(server *mcp.Server, client *historian.Client, logger *slog.Logger) {
 	inputSchema := map[string]any{
 		"type": "object",
 		"properties": map[string]any{
 			"tag_id":     map[string]any{"type": "string", "description": "Tag FQN"},
-			"start_time": map[string]any{"type": "string", "description": "Start time"},
-			"end_time":   map[string]any{"type": "string", "description": "End time"},
+			"start_date_time": map[string]any{"type": "string", "description": "Start time"},
+			"end_date_time":   map[string]any{"type": "string", "description": "End time"},
 			"retrieval_mode": map[string]any{
 				"type":        "string",
 				"enum":        []string{"Average", "Cyclic", "Integral", "Minimum", "Maximum", "BestFit", "Delta", "Interpolated", "Slope", "Counter", "Full"},
@@ -77,8 +77,11 @@ func RegisterReadTrends(server *mcp.Server, client *historian.Client, logger *sl
 	}
 
 	server.AddTool(&mcp.Tool{
-		Name:        "read_trends",
-		Description: "Retrieve time-series process values for a historian tag over a time range",
+		Name: "read_process_values",
+		Description: "Retrieve time-series process values for a historian tag over a time range. " +
+			"Optional: retrieval_mode (Average|Cyclic|Integral|Minimum|Maximum|BestFit|Delta|Interpolated|Slope|Counter|Full), " +
+			"resolution_ms. " +
+			"Note: do not URL-encode param values — client handles encoding automatically.",
 		InputSchema: inputSchema,
 	}, func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		args := parseArgs(req)
@@ -93,8 +96,8 @@ func RegisterReadTrends(server *mcp.Server, client *historian.Client, logger *sl
 		}
 
 		// Build time range filters from convenience params
-		startTime := getStringArg(args, "start_time")
-		endTime := getStringArg(args, "end_time")
+		startTime := getStringArg(args, "start_date_time")
+		endTime := getStringArg(args, "end_date_time")
 		var timeConds []types.FilterCondition
 		if startTime != "" {
 			timeConds = append(timeConds, types.FilterCondition{Field: "DateTime", Operator: "ge", Value: startTime})
@@ -106,20 +109,21 @@ func RegisterReadTrends(server *mcp.Server, client *historian.Client, logger *sl
 			groups = append(groups, types.FilterGroupDef{And: timeConds})
 		}
 
-		retrievalMode := getStringArg(args, "retrieval_mode")
-		if retrievalMode != "" && !isValidRetrievalMode(retrievalMode) {
+		extraParams := endpoints.ProcessValuesParams{
+			RetrievalMode: getOptionalStringArg(args, "retrieval_mode"),
+			ResolutionMS:  getOptionalIntArg(args, "resolution_ms"),
+		}
+		if extraParams.RetrievalMode != nil && !isValidRetrievalMode(*extraParams.RetrievalMode) {
 			return &mcp.CallToolResult{
 				IsError: true,
-				Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("unsupported retrieval mode: %s", retrievalMode)}},
+				Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("unsupported retrieval mode: %s", *extraParams.RetrievalMode)}},
 			}, nil
 		}
 		userFilters := parseFilters(args["filters"])
 		groups = append(groups, userFilters...)
-		resolutionMS := getIntArg(args, "resolution_ms", 3600000)
 		maxResults := getIntArg(args, "max_results", 100)
 
-		result, err := endpoints.GetProcessValues(ctx, client, groups, retrievalMode, resolutionMS, maxResults)
-
+		result, err := endpoints.GetProcessValues(ctx, client, groups, maxResults, extraParams)
 		if err != nil {
 			return &mcp.CallToolResult{
 				IsError: true,
@@ -134,11 +138,12 @@ func RegisterReadTrends(server *mcp.Server, client *historian.Client, logger *sl
 		capped := capRows(rows, 100)
 
 		var preview strings.Builder
-		preview.WriteString("| FQN | DateTime | Value | Quality | TagPath |\n")
-		preview.WriteString("|-----|----------|-------|---------|--------|\n")
+		preview.WriteString("| FQN | DateTime | Value | OpcQuality | Unit |\n")
+		preview.WriteString("|-----|----------|-------|------------|------|\n")
 		for _, pv := range capped {
-			fmt.Fprintf(&preview, "| %s | %s | %g | %s | %s |\n",
-				pv.FQN, pv.DateTime, pv.Value, pv.Quality, pv.TagPath)
+			fmt.Fprintf(&preview, "| %s | %s | %s | %s | %s |\n",
+				pv.FQN, pv.DateTime, floatPtrStr(pv.Value),
+				intPtrStr(pv.OpcQuality), pv.Unit)
 		}
 
 		resourceURI := fmt.Sprintf("historians://%s/trends/%s", client.BaseURL(), uuid.New().String())
@@ -154,7 +159,7 @@ func RegisterReadTrends(server *mcp.Server, client *historian.Client, logger *sl
 
 		dualJSON, _ := json.Marshal(dualResult)
 
-		logger.Info("read_trends", "rows", len(rows), "tag_id", tagID)
+		logger.Info("read_process_values", "rows", len(rows), "tag_id", tagID)
 
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
