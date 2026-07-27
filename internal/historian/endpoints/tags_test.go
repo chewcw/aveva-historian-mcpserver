@@ -3,24 +3,13 @@ package endpoints
 import (
 	"context"
 	"strings"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 
-	"github.com/chewcw/aveva-historian-mcpserver/internal/historian"
 	"github.com/chewcw/aveva-historian-mcpserver/internal/types"
 )
 
 func TestGetTagsQuery(t *testing.T) {
-	var rawQuery string
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		rawQuery = r.URL.RawQuery
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"value":[]}`))
-	}))
-	defer ts.Close()
-
-	client := historian.New(ts.URL, "u", "p", nil)
+	m := NewMockServer(t, `{"value":[]}`)
 	groups := []types.FilterGroupDef{
 		{
 			And: []types.FilterCondition{
@@ -28,38 +17,34 @@ func TestGetTagsQuery(t *testing.T) {
 			},
 		},
 	}
-	result, err := GetTags(context.Background(), client, groups, 10, 0, TagsParams{
-		RolloverValue: float64Ptr(250.5),
-		MessageOff:    strPtr("LOW"),
-		MessageOn:     strPtr("HIGH"),
-		TagType:       strPtr("Analog"),
+	result, err := GetTags(context.Background(), m.Client, groups, 10, 0, TagsParams{
+		RolloverValue: new(float64(250.5)),
+		MessageOff:    new("LOW"),
+		MessageOn:     new("HIGH"),
+		TagType:       new("Analog"),
 	})
 	if err != nil {
-		t.Fatalf("GetTags failed: %v (rawQuery=%q)", err, rawQuery)
+		t.Fatalf("GetTags failed: %v (rawQuery=%q)", err, m.RawQuery)
 	}
 	if result == nil {
 		t.Fatal("result is nil")
 	}
-	if rawQuery == "" {
+	if m.RawQuery == "" {
 		t.Error("rawQuery is empty")
 	}
-	if !strings.Contains(rawQuery, "$filter=") {
-		t.Errorf("expected $filter= in query, got %q", rawQuery)
+	if !strings.Contains(m.RawQuery, "$filter=") {
+		t.Errorf("expected $filter= in query, got %q", m.RawQuery)
 	}
-	if !strings.Contains(rawQuery, "RolloverValue=250.5") {
-		t.Errorf("expected RolloverValue in query, got %q", rawQuery)
+	if !strings.Contains(m.RawQuery, "RolloverValue=250.5") {
+		t.Errorf("expected RolloverValue in query, got %q", m.RawQuery)
 	}
-	if !strings.Contains(rawQuery, "MessageOff=LOW") {
-		t.Errorf("expected MessageOff in query, got %q", rawQuery)
+	if !strings.Contains(m.RawQuery, "MessageOff=LOW") {
+		t.Errorf("expected MessageOff in query, got %q", m.RawQuery)
 	}
-	if !strings.Contains(rawQuery, "MessageOn=HIGH") {
-		t.Errorf("expected MessageOn in query, got %q", rawQuery)
+	if !strings.Contains(m.RawQuery, "MessageOn=HIGH") {
+		t.Errorf("expected MessageOn in query, got %q", m.RawQuery)
 	}
-	if !strings.Contains(rawQuery, "TagType=Analog") {
-		t.Errorf("expected TagType in query, got %q", rawQuery)
+	if !strings.Contains(m.RawQuery, "TagType=Analog") {
+		t.Errorf("expected TagType in query, got %q", m.RawQuery)
 	}
-}
-
-func float64Ptr(v float64) *float64 {
-	return &v
 }
