@@ -18,15 +18,15 @@ func RegisterReadAnalogSummary(server *mcp.Server, client *historian.Client, log
 	inputSchema := map[string]any{
 		"type": "object",
 		"properties": map[string]any{
-			"tag_id":     map[string]any{"type": "string", "description": "Tag FQN"},
-			"start_time": map[string]any{"type": "string", "description": "Start time"},
-			"end_time":   map[string]any{"type": "string", "description": "End time"},
+			"tag_id":        map[string]any{"type": "string", "description": "Tag FQN"},
+			"start_time":    map[string]any{"type": "string", "description": "Start time"},
+			"end_time":      map[string]any{"type": "string", "description": "End time"},
 			"resolution_ms": map[string]any{"type": "number", "description": "Granularity in ms"},
 			"max_results":   map[string]any{"type": "number", "description": "Max rows (default 100)"},
 			"filters": map[string]any{
-				"type": "array",
+				"type":        "array",
 				"description": "Additional Filters using OData expressions. Array of groups (AND-combined across groups). Each group has \"and\" or \"or\" with conditions. Condition: {\"field\":\"...\", \"operator\":\"...\", \"value\":...}. Operators: eq,ne,gt,ge,lt,le (str|num), startsWith,endsWith,contains (str), in (array), has (str). Example: [{\"and\":[{\"field\":\"FQN\",\"operator\":\"startsWith\",\"value\":\"CDE\"}]}] -> startswith(FQN,CDE)",
-					"items": map[string]any{
+				"items": map[string]any{
 					"type": "object",
 					"properties": map[string]any{
 						"and": map[string]any{
@@ -35,8 +35,15 @@ func RegisterReadAnalogSummary(server *mcp.Server, client *historian.Client, log
 								"type": "object",
 								"properties": map[string]any{
 									"field":    map[string]any{"type": "string"},
-									"operator": map[string]any{"type": "string"},
-									"value":    map[string]any{},
+									"operator": map[string]any{"type": "string", "enum": []string{"eq", "ne", "gt", "ge", "lt", "le", "startsWith", "endsWith", "contains", "in", "has"}},
+									"value": map[string]any{
+										"oneOf": []any{
+											map[string]any{"type": "string"},
+											map[string]any{"type": "number"},
+											map[string]any{"type": "boolean"},
+											map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
+										},
+									},
 								},
 							},
 						},
@@ -46,8 +53,15 @@ func RegisterReadAnalogSummary(server *mcp.Server, client *historian.Client, log
 								"type": "object",
 								"properties": map[string]any{
 									"field":    map[string]any{"type": "string"},
-									"operator": map[string]any{"type": "string"},
-									"value":    map[string]any{},
+									"operator": map[string]any{"type": "string", "enum": []string{"eq", "ne", "gt", "ge", "lt", "le", "startsWith", "endsWith", "contains", "in", "has"}},
+									"value": map[string]any{
+										"oneOf": []any{
+											map[string]any{"type": "string"},
+											map[string]any{"type": "number"},
+											map[string]any{"type": "boolean"},
+											map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
+										},
+									},
 								},
 							},
 						},

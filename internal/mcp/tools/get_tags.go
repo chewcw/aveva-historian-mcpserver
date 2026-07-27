@@ -19,7 +19,7 @@ func RegisterGetTags(server *mcp.Server, client *historian.Client, logger *slog.
 		"type": "object",
 		"properties": map[string]any{
 			"filters": map[string]any{
-				"type": "array",
+				"type":        "array",
 				"description": "Filters using OData expressions. Array of groups (AND-combined across groups). Each group has \"and\" or \"or\" with conditions. Condition: {\"field\":\"...\", \"operator\":\"...\", \"value\":...}. Operators: eq,ne,gt,ge,lt,le (str|num), startsWith,endsWith,contains (str), in (array), has (str). Example: [{\"and\":[{\"field\":\"FQN\",\"operator\":\"startsWith\",\"value\":\"CDE\"}]}] -> startswith(FQN,CDE)",
 				"items": map[string]any{
 					"type": "object",
@@ -30,8 +30,15 @@ func RegisterGetTags(server *mcp.Server, client *historian.Client, logger *slog.
 								"type": "object",
 								"properties": map[string]any{
 									"field":    map[string]any{"type": "string"},
-									"operator": map[string]any{"type": "string"},
-									"value":    map[string]any{},
+									"operator": map[string]any{"type": "string", "enum": []string{"eq", "ne", "gt", "ge", "lt", "le", "startsWith", "endsWith", "contains", "in", "has"}},
+									"value": map[string]any{
+										"oneOf": []any{
+											map[string]any{"type": "string"},
+											map[string]any{"type": "number"},
+											map[string]any{"type": "boolean"},
+											map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
+										},
+									},
 								},
 							},
 						},
@@ -41,15 +48,22 @@ func RegisterGetTags(server *mcp.Server, client *historian.Client, logger *slog.
 								"type": "object",
 								"properties": map[string]any{
 									"field":    map[string]any{"type": "string"},
-									"operator": map[string]any{"type": "string"},
-									"value":    map[string]any{},
+									"operator": map[string]any{"type": "string", "enum": []string{"eq", "ne", "gt", "ge", "lt", "le", "startsWith", "endsWith", "contains", "in", "has"}},
+									"value": map[string]any{
+										"oneOf": []any{
+											map[string]any{"type": "string"},
+											map[string]any{"type": "number"},
+											map[string]any{"type": "boolean"},
+											map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
+										},
+									},
 								},
 							},
 						},
 					},
 				},
 			},
-			"top": map[string]any{"type": "number", "description": "Max rows (default 50)"},
+			"top":  map[string]any{"type": "number", "description": "Max rows (default 50)"},
 			"skip": map[string]any{"type": "number", "description": "Rows to skip (default 0)"},
 		},
 	}
