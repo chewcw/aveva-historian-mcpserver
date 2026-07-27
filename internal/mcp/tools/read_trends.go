@@ -21,12 +21,16 @@ func RegisterReadTrends(server *mcp.Server, client *historian.Client, logger *sl
 			"tag_id":     map[string]any{"type": "string", "description": "Tag FQN"},
 			"start_time": map[string]any{"type": "string", "description": "Start time"},
 			"end_time":   map[string]any{"type": "string", "description": "End time"},
-			"retrieval_mode": map[string]any{"type": "string", "description": "RetrievalMode: Average|Cyclic|Integral|Minimum|Maximum|BestFit|Delta|Interpolated|Slope|Counter|Full"},
+			"retrieval_mode": map[string]any{
+				"type":        "string",
+				"enum":        []string{"Average", "Cyclic", "Integral", "Minimum", "Maximum", "BestFit", "Delta", "Interpolated", "Slope", "Counter", "Full"},
+				"description": "How data is calculated for retrieval",
+			},
 			"resolution_ms":  map[string]any{"type": "number", "description": "Granularity in ms"},
 			"max_results":    map[string]any{"type": "number", "description": "Max rows (default 100)"},
 			"filters": map[string]any{
 				"type": "array",
-				"description": "Additional filter groups (AND/OR). Each: {\"and\":[...]} or {\"or\":[...]}",
+				"description": "Additional Filters using OData expressions. Array of groups (AND-combined across groups). Each group has \"and\" or \"or\" with conditions. Condition: {\"field\":\"...\", \"operator\":\"...\", \"value\":...}. Operators: eq,ne,gt,ge,lt,le (str|num), startsWith,endsWith,contains (str), in (array), has (str). Example: [{\"and\":[{\"field\":\"FQN\",\"operator\":\"startsWith\",\"value\":\"CDE\"}]}] -> startswith(FQN,CDE)",
 				"items": map[string]any{"type": "object"},
 			},
 		},
@@ -62,11 +66,15 @@ func RegisterReadTrends(server *mcp.Server, client *historian.Client, logger *sl
 			groups = append(groups, types.FilterGroupDef{And: timeConds})
 		}
 
-		// Add user-provided filter groups
+		retrievalMode := getStringArg(args, "retrieval_mode")
+		if retrievalMode != "" && !isValidRetrievalMode(retrievalMode) {
+			return &mcp.CallToolResult{
+				IsError: true,
+				Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("unsupported retrieval mode: %s", retrievalMode)}},
+			}, nil
+		}
 		userFilters := parseFilters(args["filters"])
 		groups = append(groups, userFilters...)
-
-		retrievalMode := getStringArg(args, "retrieval_mode")
 		resolutionMS := getIntArg(args, "resolution_ms", 3600000)
 		maxResults := getIntArg(args, "max_results", 100)
 
@@ -115,4 +123,14 @@ func RegisterReadTrends(server *mcp.Server, client *historian.Client, logger *sl
 			},
 		}, nil
 	})
+}
+
+func isValidRetrievalMode(mode string) bool {
+	switch mode {
+	case "Average", "Cyclic", "Integral", "Minimum", "Maximum",
+		"BestFit", "Delta", "Interpolated", "Slope", "Counter", "Full":
+		return true
+	default:
+		return false
+	}
 }

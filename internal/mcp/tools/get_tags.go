@@ -20,7 +20,7 @@ func RegisterGetTags(server *mcp.Server, client *historian.Client, logger *slog.
 		"properties": map[string]any{
 			"filters": map[string]any{
 				"type": "array",
-				"description": "Filter groups with AND/OR conditions. Each group: {\"and\":[...]} or {\"or\":[...]}, each condition: {\"field\":\"...\", \"operator\":\"eq|ne|gt|ge|lt|le|startsWith|endsWith|contains|in|has\", \"value\":...}",
+				"description": "Filters using OData expressions. Array of groups (AND-combined across groups). Each group has \"and\" or \"or\" with conditions. Condition: {\"field\":\"...\", \"operator\":\"...\", \"value\":...}. Operators: eq,ne,gt,ge,lt,le (str|num), startsWith,endsWith,contains (str), in (array), has (str). Example: [{\"and\":[{\"field\":\"FQN\",\"operator\":\"startsWith\",\"value\":\"CDE\"}]}] -> startswith(FQN,CDE)",
 				"items": map[string]any{
 					"type": "object",
 					"properties": map[string]any{
