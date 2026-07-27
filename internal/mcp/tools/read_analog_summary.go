@@ -26,7 +26,33 @@ func RegisterReadAnalogSummary(server *mcp.Server, client *historian.Client, log
 			"filters": map[string]any{
 				"type": "array",
 				"description": "Additional Filters using OData expressions. Array of groups (AND-combined across groups). Each group has \"and\" or \"or\" with conditions. Condition: {\"field\":\"...\", \"operator\":\"...\", \"value\":...}. Operators: eq,ne,gt,ge,lt,le (str|num), startsWith,endsWith,contains (str), in (array), has (str). Example: [{\"and\":[{\"field\":\"FQN\",\"operator\":\"startsWith\",\"value\":\"CDE\"}]}] -> startswith(FQN,CDE)",
-				"items": map[string]any{"type": "object"},
+					"items": map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"and": map[string]any{
+							"type": "array",
+							"items": map[string]any{
+								"type": "object",
+								"properties": map[string]any{
+									"field":    map[string]any{"type": "string"},
+									"operator": map[string]any{"type": "string"},
+									"value":    map[string]any{},
+								},
+							},
+						},
+						"or": map[string]any{
+							"type": "array",
+							"items": map[string]any{
+								"type": "object",
+								"properties": map[string]any{
+									"field":    map[string]any{"type": "string"},
+									"operator": map[string]any{"type": "string"},
+									"value":    map[string]any{},
+								},
+							},
+						},
+					},
+				},
 			},
 		},
 	}
