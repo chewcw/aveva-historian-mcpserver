@@ -161,6 +161,22 @@ func getOptionalFloatArg(args map[string]any, name string) *float64 {
 	return &f
 }
 
+// getOptionalBoolArg returns a *bool pointer, or nil if arg is missing or not a bool.
+func getOptionalBoolArg(args map[string]any, name string) *bool {
+	if args == nil {
+		return nil
+	}
+	v, ok := args[name]
+	if !ok {
+		return nil
+	}
+	b, ok := v.(bool)
+	if !ok {
+		return nil
+	}
+	return &b
+}
+
 // floatPtrStr returns the formatted float64 value, or "" if p is nil.
 func floatPtrStr(p *float64) string {
 	if p == nil {

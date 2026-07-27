@@ -18,19 +18,25 @@ func RegisterReadProcessValues(server *mcp.Server, client *historian.Client, log
 	inputSchema := map[string]any{
 		"type": "object",
 		"properties": map[string]any{
-			"tag_id":     map[string]any{"type": "string", "description": "Tag FQN"},
-			"start_date_time": map[string]any{"type": "string", "description": "Start time"},
-			"end_date_time":   map[string]any{"type": "string", "description": "End time"},
+			"tag_id":          map[string]any{"type": "string", "description": "Tag FQN (optional)"},
+			"start_date_time": map[string]any{"type": "string", "description": "Start time (optional)"},
+			"end_date_time":   map[string]any{"type": "string", "description": "End time (optional)"},
 			"retrieval_mode": map[string]any{
 				"type":        "string",
 				"enum":        []string{"Average", "Cyclic", "Integral", "Minimum", "Maximum", "BestFit", "Delta", "Interpolated", "Slope", "Counter", "Full"},
-				"description": "How data is calculated for retrieval",
+				"description": "Retrieval mode (optional)",
 			},
-			"resolution_ms": map[string]any{"type": "number", "description": "Granularity in ms"},
-			"max_results":   map[string]any{"type": "number", "description": "Max rows (default 100)"},
+			"resolution_ms": map[string]any{"type": "number", "description": "Granularity in ms (optional)"},
+			"max_results":   map[string]any{"type": "number", "description": "Max rows (optional, default 100)"},
+			"opc_quality":   map[string]any{"type": "integer", "description": "OPC quality filter (optional)"},
+			"value":         map[string]any{"type": "number", "description": "Value filter: 0 or 1 (optional)"},
+			"bounding":      map[string]any{"type": "boolean", "description": "Include boundary data outside query range (optional)"},
+			"text":          map[string]any{"type": "string", "description": "Text value for string/discrete tags (optional)"},
+			"tag_filter":    map[string]any{"type": "string", "description": "OData filter on tag attributes like FQN, description (optional)"},
+			"expression":    map[string]any{"type": "string", "description": "UOM conversion expression, e.g. UOM([FQN],[Unit]) (optional)"},
 			"filters": map[string]any{
 				"type":        "array",
-				"description": "Additional Filters using OData expressions. Array of groups (AND-combined across groups). Each group has \"and\" or \"or\" with conditions. Condition: {\"field\":\"...\", \"operator\":\"...\", \"value\":...}. Operators: eq,ne,gt,ge,lt,le (str|num), startsWith,endsWith,contains (str), in (array), has (str). Example: [{\"and\":[{\"field\":\"FQN\",\"operator\":\"startsWith\",\"value\":\"CDE\"}]}] -> startswith(FQN,CDE)",
+				"description": "Optional. Additional Filters using OData expressions. Array of groups (AND-combined across groups). Each group has \"and\" or \"or\" with conditions. Condition: {\"field\":\"...\", \"operator\":\"...\", \"value\":...}. Operators: eq,ne,gt,ge,lt,le (str|num), startsWith,endsWith,contains (str), in (array), has (str). Example: [{\"and\":[{\"field\":\"FQN\",\"operator\":\"startsWith\",\"value\":\"CDE\"}]}] -> startswith(FQN,CDE)",
 				"items": map[string]any{
 					"type": "object",
 					"properties": map[string]any{
@@ -112,6 +118,12 @@ func RegisterReadProcessValues(server *mcp.Server, client *historian.Client, log
 		extraParams := endpoints.ProcessValuesParams{
 			RetrievalMode: getOptionalStringArg(args, "retrieval_mode"),
 			ResolutionMS:  getOptionalIntArg(args, "resolution_ms"),
+			OPCQuality:    getOptionalIntArg(args, "opc_quality"),
+			Value:         getOptionalFloatArg(args, "value"),
+			Bounding:      getOptionalBoolArg(args, "bounding"),
+			Text:          getOptionalStringArg(args, "text"),
+			TagFilter:     getOptionalStringArg(args, "tag_filter"),
+			Expression:    getOptionalStringArg(args, "expression"),
 		}
 		if extraParams.RetrievalMode != nil && !isValidRetrievalMode(*extraParams.RetrievalMode) {
 			return &mcp.CallToolResult{

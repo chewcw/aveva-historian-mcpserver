@@ -12,8 +12,14 @@ import (
 // ProcessValuesParams holds optional query parameters for the ProcessValues endpoint.
 // Pointer fields: nil = omit the parameter from the API request.
 type ProcessValuesParams struct {
-	RetrievalMode *string // "Average"|"Cyclic"|"Integral"|"Minimum"|"Maximum"|"BestFit"|"Delta"|"Interpolated"|"Slope"|"Counter"|"Full"
-	ResolutionMS  *int    // nil = omit (API default: 0 = raw values)
+	RetrievalMode *string  // "Average"|"Cyclic"|"Integral"|"Minimum"|"Maximum"|"BestFit"|"Delta"|"Interpolated"|"Slope"|"Counter"|"Full"
+	ResolutionMS  *int     // nil = omit (API default: 0 = raw values)
+	OPCQuality    *int     // OPC quality filter (Int32)
+	Value         *float64 // Value filter: 0 or 1 for binary/discrete tags
+	Bounding      *bool    // Include boundary data outside query range
+	Text          *string  // Text value for string/discrete tags
+	TagFilter     *string  // OData filter on tag attributes like FQN, description
+	Expression    *string  // UOM conversion expression, e.g. UOM([FQN],[Unit])
 }
 
 func GetProcessValues(ctx context.Context, client *historian.Client, groups []types.FilterGroupDef, top int, extra ProcessValuesParams) (*historian.ODataResponse[historian.ProcessValue], error) {
@@ -27,6 +33,24 @@ func GetProcessValues(ctx context.Context, client *historian.Client, groups []ty
 	}
 	if extra.ResolutionMS != nil {
 		qb.Param("Resolution", fmt.Sprintf("%d", *extra.ResolutionMS))
+	}
+	if extra.OPCQuality != nil {
+		qb.Param("OPCQuality", fmt.Sprintf("%d", *extra.OPCQuality))
+	}
+	if extra.Value != nil {
+		qb.Param("Value", fmt.Sprintf("%g", *extra.Value))
+	}
+	if extra.Bounding != nil {
+		qb.Param("Bounding", fmt.Sprintf("%t", *extra.Bounding))
+	}
+	if extra.Text != nil {
+		qb.Param("Text", *extra.Text)
+	}
+	if extra.TagFilter != nil {
+		qb.Param("TagFilter", *extra.TagFilter)
+	}
+	if extra.Expression != nil {
+		qb.Param("Expression", *extra.Expression)
 	}
 
 	q := qb.Build()

@@ -18,35 +18,35 @@ func RegisterReadAnalogSummary(server *mcp.Server, client *historian.Client, log
 	inputSchema := map[string]any{
 		"type": "object",
 		"properties": map[string]any{
-			"tag_id":        map[string]any{"type": "string", "description": "Tag FQN"},
-			"start_time":    map[string]any{"type": "string", "description": "Start time"},
-			"end_time":      map[string]any{"type": "string", "description": "End time"},
-			"resolution_ms": map[string]any{"type": "number", "description": "Granularity in ms"},
-			"max_results":   map[string]any{"type": "number", "description": "Max rows (default 100)"},
+			"tag_id":        map[string]any{"type": "string", "description": "Tag FQN (optional)"},
+			"start_time":    map[string]any{"type": "string", "description": "Start time (optional)"},
+			"end_time":      map[string]any{"type": "string", "description": "End time (optional)"},
+			"resolution_ms": map[string]any{"type": "number", "description": "Resolution in ms (optional)"},
+			"max_results":   map[string]any{"type": "number", "description": "Max rows (optional, default 100)"},
 			"retrieval_mode": map[string]any{
 				"type":        "string",
 				"enum":        []string{"Cyclic", "Full"},
-				"description": "Retrieval mode: Cyclic (default) or Full",
+				"description": "Retrieval mode (optional): Cyclic or Full",
 			},
 			"slice_by": map[string]any{
 				"type":        "string",
-				"description": "Comma-separated FQNs (max 10) for dynamic cycle computation",
+				"description": "Comma-separated FQNs (max 10) for dynamic cycle computation (optional)",
 			},
 			"slice_by_value": map[string]any{
 				"type":        "string",
-				"description": "Filter criterion for SliceBy results",
+				"description": "Filter criterion for SliceBy results (optional)",
 			},
 			"opc_quality": map[string]any{
 				"type":        "integer",
-				"description": "OPC quality filter (Int32)",
+				"description": "OPC quality filter (Int32) (optional)",
 			},
 			"percent_good": map[string]any{
 				"type":        "number",
-				"description": "Percent good threshold (0-100)",
+				"description": "Percent good threshold (0-100) (optional)",
 			},
 			"filters": map[string]any{
 				"type":        "array",
-				"description": "Additional Filters using OData expressions. Array of groups (AND-combined across groups). Each group has \"and\" or \"or\" with conditions. Condition: {\"field\":\"...\", \"operator\":\"...\", \"value\":...}. Operators: eq,ne,gt,ge,lt,le (str|num), startsWith,endsWith,contains (str), in (array), has (str). Example: [{\"and\":[{\"field\":\"FQN\",\"operator\":\"startsWith\",\"value\":\"CDE\"}]}] -> startswith(FQN,CDE)",
+				"description": "Optional. Additional Filters using OData expressions. Array of groups (AND-combined across groups). Each group has \"and\" or \"or\" with conditions. Condition: {\"field\":\"...\", \"operator\":\"...\", \"value\":...}. Operators: eq,ne,gt,ge,lt,le (str|num), startsWith,endsWith,contains (str), in (array), has (str). Example: [{\"and\":[{\"field\":\"FQN\",\"operator\":\"startsWith\",\"value\":\"CDE\"}]}] -> startswith(FQN,CDE)",
 				"items": map[string]any{
 					"type": "object",
 					"properties": map[string]any{
