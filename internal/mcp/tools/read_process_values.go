@@ -15,6 +15,7 @@ import (
 )
 
 func RegisterReadProcessValues(server *mcp.Server, client *historian.Client, logger *slog.Logger) {
+	logger = logger.With("tool", "read_process_values")
 	inputSchema := map[string]any{
 		"type": "object",
 		"properties": map[string]any{
@@ -228,7 +229,7 @@ func RegisterReadProcessValues(server *mcp.Server, client *historian.Client, log
 
 		dualJSON, _ := json.Marshal(dualResult)
 
-		logger.Info("read_process_values", "rows", len(rows), "fqn", fqn)
+		logger.Info("ok", "rows", len(rows), "fqn", fqn)
 
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{

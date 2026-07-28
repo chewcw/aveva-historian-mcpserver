@@ -32,6 +32,7 @@ func New(baseURL, username, password, apiPathPrefix string, logger *slog.Logger)
 	if logger == nil {
 		logger = slog.Default()
 	}
+	logger = logger.With("source", "historian.Client")
 	return &Client{
 		baseURL:       strings.TrimRight(baseURL, "/"),
 		apiPathPrefix: "/" + strings.Trim(apiPathPrefix, "/"),

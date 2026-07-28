@@ -15,6 +15,7 @@ import (
 )
 
 func RegisterGetTags(server *mcp.Server, client *historian.Client, logger *slog.Logger) {
+	logger = logger.With("tool", "get_tags")
 	inputSchema := map[string]any{
 		"type": "object",
 		"properties": map[string]any{
@@ -201,7 +202,7 @@ func RegisterGetTags(server *mcp.Server, client *historian.Client, logger *slog.
 
 		dualJSON, _ := json.Marshal(dualResult)
 
-		logger.Info("get_tags", "rows", len(rows), "top", topVal)
+		logger.Info("ok", "rows", len(rows), "top", topVal)
 
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{

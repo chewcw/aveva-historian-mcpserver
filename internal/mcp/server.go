@@ -11,7 +11,11 @@ import (
 
 // NewServer creates an MCP server with the three historian tools registered.
 func NewServer(cfg *config.Config, client *historian.Client, logger *slog.Logger) *mcp.Server {
+	if logger == nil {
+		logger = slog.Default()
+	}
 	server := mcp.NewServer(&mcp.Implementation{Name: cfg.ServerName}, nil)
+	logger = logger.With("source", "mcp.Server")
 	tools.RegisterGetTags(server, client, logger)
 	tools.RegisterReadProcessValues(server, client, logger)
 	tools.RegisterReadAnalogSummary(server, client, logger)
