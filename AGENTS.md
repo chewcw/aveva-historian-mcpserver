@@ -78,13 +78,11 @@ func TestGetTags(t *testing.T) {
 
 ## What NOT to do
 
-- **NEVER embed >100 rows** in MCP `CallToolResult`. Use `ResourceLink` for full datasets.
+- **NEVER embed large JSON** in MCP `CallToolResult`. Use `formatResult()` which checks `byteLimit` and falls back to `ResourceLink` with a 100-row preview cap.
 - **NEVER use offset pagination** for time-series data. Keyset cursor on `(timestamp, id)` only.
-
 - **NEVER commit `.env`** with real credentials. Use `.env.example`.
 - **NEVER add init()** or package-level mutable state.
-- **NEVER use Kerberos** — NTLM only. (go.mod has krb5 dep — ignore it, unused.)
-- **NEVER edit `vendor/`**, generated files, or `.codegraph/` directory.
+- **NEVER edit generated files** — regenerate them from source.
 
 ## Git
 
@@ -111,5 +109,6 @@ Squash merge only to main.
 | `internal/mcp/server.go` | MCP server + capability registration |
 | `internal/mcp/tools/*.go` | One file per MCP tool handler |
 | `internal/historian/endpoints/*.go` | One file per API group |
-| `internal/dataserver/*.go` | REST out-of-band server |
+| `internal/logging/logger.go` | Structured logging setup |
+| `internal/types/*.go` | Shared type defs (filter, query options) |
 
