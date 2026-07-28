@@ -51,12 +51,6 @@ func TestODataResponseUnmarshalTags(t *testing.T) {
 	if tag.InterpolationType != "Linear" {
 		t.Errorf("InterpolationType = %q, want %q", tag.InterpolationType, "Linear")
 	}
-	if tag.IntegralDivisor == nil || *tag.IntegralDivisor != 1.0 {
-		t.Errorf("IntegralDivisor = %v, want 1.0", tag.IntegralDivisor)
-	}
-	if tag.RolloverValue == nil || *tag.RolloverValue != 999.9 {
-		t.Errorf("RolloverValue = %v, want 999.9", tag.RolloverValue)
-	}
 	if tag.MessageOff != "LOW" {
 		t.Errorf("MessageOff = %q, want %q", tag.MessageOff, "LOW")
 	}
@@ -65,9 +59,6 @@ func TestODataResponseUnmarshalTags(t *testing.T) {
 	}
 	if tag.Alias != "SINE" {
 		t.Errorf("Alias = %q, want %q", tag.Alias, "SINE")
-	}
-	if tag.Location != "Lab" {
-		t.Errorf("Location = %q, want %q", tag.Location, "Lab")
 	}
 	if tag.Description != "Sine wave tag" {
 		t.Errorf("Description = %q, want %q", tag.Description, "Sine wave tag")

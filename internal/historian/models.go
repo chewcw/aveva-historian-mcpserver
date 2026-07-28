@@ -17,13 +17,13 @@ type Tag struct {
 	EngUnitMax        *float64 `json:"EngUnitMax,omitempty"`
 	EngUnitMin        *float64 `json:"EngUnitMin,omitempty"`
 	InterpolationType string   `json:"InterpolationType,omitempty"`
-	IntegralDivisor   *float64 `json:"IntegralDivisor,omitempty"`
-	RolloverValue     *float64 `json:"RolloverValue,omitempty"`
 	MessageOff        string   `json:"MessageOff,omitempty"`
 	MessageOn         string   `json:"MessageOn,omitempty"`
 	Alias             string   `json:"Alias,omitempty"`
-	Location          string   `json:"Location,omitempty"`
 	Description       string   `json:"Description,omitempty"`
+	Minutely         string   `json:"Minutely@odata.navigationLink,omitempty"`
+	Hourly           string   `json:"Hourly@odata.navigationLink,omitempty"`
+	Daily            string   `json:"Daily@odata.navigationLink,omitempty"`
 }
 
 // ProcessValue represents a timestamped process value.

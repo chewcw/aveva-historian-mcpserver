@@ -45,3 +45,6 @@ docs/
 .superpowers/
 
 ageva-historian-mcpserver
+
+# Log files
+log.txt

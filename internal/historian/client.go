@@ -14,12 +14,13 @@ import (
 )
 
 type Client struct {
-	baseURL    string
-	httpClient *http.Client
-	logger     *slog.Logger
+	baseURL        string
+	apiPathPrefix  string
+	httpClient     *http.Client
+	logger         *slog.Logger
 }
 
-func New(baseURL, username, password string, logger *slog.Logger) *Client {
+func New(baseURL, username, password, apiPathPrefix string, logger *slog.Logger) *Client {
 	transport := ntlmssp.Negotiator{RoundTripper: &http.Transport{}}
 	httpClient := &http.Client{
 		Transport: &ntlmsspWrapper{
@@ -32,14 +33,15 @@ func New(baseURL, username, password string, logger *slog.Logger) *Client {
 		logger = slog.Default()
 	}
 	return &Client{
-		baseURL:    strings.TrimRight(baseURL, "/"),
-		httpClient: httpClient,
-		logger:     logger,
+		baseURL:       strings.TrimRight(baseURL, "/"),
+		apiPathPrefix: "/" + strings.Trim(apiPathPrefix, "/"),
+		httpClient:    httpClient,
+		logger:        logger,
 	}
 }
 
 func (c *Client) Get(ctx context.Context, path, query string, dest any) error {
-	full := fmt.Sprintf("%s/Historian/v2/%s", c.baseURL, path)
+	full := fmt.Sprintf("%s%s/%s", c.baseURL, c.apiPathPrefix, path)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, full, nil)
 	if err != nil {
 		return fmt.Errorf("create request: %w", err)

@@ -8,12 +8,14 @@ import (
 )
 
 type Config struct {
+	APIPathPrefix string
 	BaseURL       string
 	Username      string
 	Password      string
 	ServerName    string
 	ServerVersion string
 	LogLevel      string
+	LogFilePath   string
 }
 
 func Load(path string) (*Config, error) {
@@ -43,7 +45,9 @@ func loadFromEnv() (*Config, error) {
 		ServerName:    defaultStr(os.Getenv("MCP_SERVER_NAME"), "aveva-historian-mcp"),
 		ServerVersion: defaultStr(os.Getenv("MCP_SERVER_VERSION"), "dev"),
 		LogLevel:      defaultStr(os.Getenv("LOG_LEVEL"), "info"),
+		LogFilePath:   os.Getenv("LOG_FILE_PATH"),
 	}
+	cfg.APIPathPrefix = defaultStr(os.Getenv("AVEVA_HISTORIAN_API_PATH_PREFIX"), "/Historian/v2")
 	cfg.BaseURL = os.Getenv("AVEVA_HISTORIAN_BASE_URL")
 	cfg.Username = os.Getenv("AVEVA_HISTORIAN_USERNAME")
 	cfg.Password = os.Getenv("AVEVA_HISTORIAN_PASSWORD")

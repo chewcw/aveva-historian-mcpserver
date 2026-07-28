@@ -21,8 +21,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	logger := logging.New(cfg.LogLevel)
-	client := historian.New(cfg.BaseURL, cfg.Username, cfg.Password, logger)
+	logger := logging.New(cfg.LogLevel, cfg.LogFilePath)
+	client := historian.New(cfg.BaseURL, cfg.Username, cfg.Password, cfg.APIPathPrefix, logger)
 	server := mcpserver.NewServer(cfg, client, logger)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)

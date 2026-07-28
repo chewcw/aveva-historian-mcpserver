@@ -2,6 +2,7 @@ package endpoints
 
 import (
 	"context"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -16,13 +17,17 @@ func TestGetTagsQuery(t *testing.T) {
 				{Field: "FQN", Operator: "startswith", Value: "CDE"},
 			},
 		},
+		{
+			And: []types.FilterCondition{
+				{Field: "RolloverValue", Operator: "eq", Value: 250.5},
+				{Field: "MessageOff", Operator: "eq", Value: "LOW"},
+				{Field: "MessageOn", Operator: "eq", Value: "HIGH"},
+				{Field: "TagType", Operator: "eq", Value: "Analog"},
+			},
+		},
 	}
-	result, err := GetTags(context.Background(), m.Client, groups, 10, 0, TagsParams{
-		RolloverValue: new(float64(250.5)),
-		MessageOff:    new("LOW"),
-		MessageOn:     new("HIGH"),
-		TagType:       new("Analog"),
-	})
+	top := 10
+	result, err := GetTags(context.Background(), m.Client, groups, types.QueryOptions{Top: &top})
 	if err != nil {
 		t.Fatalf("GetTags failed: %v (rawQuery=%q)", err, m.RawQuery)
 	}
@@ -35,16 +40,17 @@ func TestGetTagsQuery(t *testing.T) {
 	if !strings.Contains(m.RawQuery, "$filter=") {
 		t.Errorf("expected $filter= in query, got %q", m.RawQuery)
 	}
-	if !strings.Contains(m.RawQuery, "RolloverValue=250.5") {
-		t.Errorf("expected RolloverValue in query, got %q", m.RawQuery)
+	decoded, _ := url.QueryUnescape(m.RawQuery)
+	if !strings.Contains(decoded, "RolloverValue eq 250.5") {
+		t.Errorf("expected RolloverValue filter in query, got %q", m.RawQuery)
 	}
-	if !strings.Contains(m.RawQuery, "MessageOff=LOW") {
-		t.Errorf("expected MessageOff in query, got %q", m.RawQuery)
+	if !strings.Contains(decoded, "MessageOff eq 'LOW'") {
+		t.Errorf("expected MessageOff filter in query, got %q", m.RawQuery)
 	}
-	if !strings.Contains(m.RawQuery, "MessageOn=HIGH") {
-		t.Errorf("expected MessageOn in query, got %q", m.RawQuery)
+	if !strings.Contains(decoded, "MessageOn eq 'HIGH'") {
+		t.Errorf("expected MessageOn filter in query, got %q", m.RawQuery)
 	}
-	if !strings.Contains(m.RawQuery, "TagType=Analog") {
-		t.Errorf("expected TagType in query, got %q", m.RawQuery)
+	if !strings.Contains(decoded, "TagType eq 'Analog'") {
+		t.Errorf("expected TagType filter in query, got %q", m.RawQuery)
 	}
 }

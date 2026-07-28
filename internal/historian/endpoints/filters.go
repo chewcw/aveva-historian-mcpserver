@@ -72,3 +72,32 @@ func addCond(gfb *odataqb.GroupFilterBuilder, c types.FilterCondition) {
 		}
 	}
 }
+
+// buildQuery builds an OData query string from filter groups and query options.
+func buildQuery(groups []types.FilterGroupDef, opts types.QueryOptions) string {
+	qb := odataqb.New()
+	if opts.Top != nil {
+		qb.Top(*opts.Top)
+	}
+	applyFilterGroups(qb, groups)
+	if len(opts.Select) > 0 {
+		qb.Select(opts.Select...)
+	}
+	if opts.Skip != nil {
+		qb.Skip(*opts.Skip)
+	}
+	for _, ob := range opts.OrderBy {
+		if ob.Direction == types.OrderDesc {
+			qb.OrderByDesc(ob.Field)
+		} else {
+			qb.OrderBy(ob.Field)
+		}
+	}
+	if opts.Count != nil && *opts.Count {
+		qb.Count()
+	}
+	if opts.Search != nil {
+		qb.Search(*opts.Search)
+	}
+	return qb.Build()
+}

@@ -18,11 +18,10 @@ func RegisterReadAnalogSummary(server *mcp.Server, client *historian.Client, log
 	inputSchema := map[string]any{
 		"type": "object",
 		"properties": map[string]any{
-			"tag_id":        map[string]any{"type": "string", "description": "Tag FQN (optional)"},
-			"start_time":    map[string]any{"type": "string", "description": "Start time (optional)"},
-			"end_time":      map[string]any{"type": "string", "description": "End time (optional)"},
-			"resolution_ms": map[string]any{"type": "number", "description": "Resolution in ms (optional)"},
-			"max_results":   map[string]any{"type": "number", "description": "Max rows (optional, default 100)"},
+			"fqn":             map[string]any{"type": "string", "description": "Tag FQN (required)"},
+			"start_date_time": map[string]any{"type": "string", "description": "Start time (required)"},
+			"end_date_time":   map[string]any{"type": "string", "description": "End time (required)"},
+			"resolution_ms":   map[string]any{"type": "number", "description": "Resolution in ms (optional)"},
 			"retrieval_mode": map[string]any{
 				"type":        "string",
 				"enum":        []string{"Cyclic", "Full"},
@@ -44,6 +43,25 @@ func RegisterReadAnalogSummary(server *mcp.Server, client *historian.Client, log
 				"type":        "number",
 				"description": "Percent good threshold (0-100) (optional)",
 			},
+			"top": map[string]any{"type": "number", "description": "Max rows (optional, default 100)"},
+			"select": map[string]any{
+				"type":        "string",
+				"description": "Comma-separated fields to include in results (optional)",
+			},
+			"skip":     map[string]any{"type": "number", "description": "Rows to skip (optional)"},
+			"orderby": map[string]any{
+				"type":        "array",
+				"description": "Sort criteria. Array of {field: string, direction: \"asc\"|\"desc\"} (optional)",
+				"items": map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"field":     map[string]any{"type": "string"},
+						"direction": map[string]any{"type": "string", "enum": []string{"asc", "desc"}},
+					},
+				},
+			},
+			"count":  map[string]any{"type": "boolean", "description": "Include total count (optional)"},
+			"search": map[string]any{"type": "string", "description": "Free-text search (optional)"},
 			"filters": map[string]any{
 				"type":        "array",
 				"description": "Optional. Additional Filters using OData expressions. Array of groups (AND-combined across groups). Each group has \"and\" or \"or\" with conditions. Condition: {\"field\":\"...\", \"operator\":\"...\", \"value\":...}. Operators: eq,ne,gt,ge,lt,le (str|num), startsWith,endsWith,contains (str), in (array), has (str). Example: [{\"and\":[{\"field\":\"FQN\",\"operator\":\"startsWith\",\"value\":\"CDE\"}]}] -> startswith(FQN,CDE)",
@@ -103,43 +121,94 @@ func RegisterReadAnalogSummary(server *mcp.Server, client *historian.Client, log
 		InputSchema: inputSchema,
 	}, func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		args := parseArgs(req)
+		var convConds []types.FilterCondition
+
+		// Required: FQN eq
+		fqn := getStringArg(args, "fqn")
+		if fqn == "" {
+			return &mcp.CallToolResult{
+				IsError: true,
+				Content: []mcp.Content{&mcp.TextContent{Text: "FQN is required"}},
+			}, nil
+		}
+		convConds = append(convConds, types.FilterCondition{Field: "FQN", Operator: "eq", Value: fqn})
+
+		// Required: start_date_time → StartDateTime ge
+		startDateTime := getStringArg(args, "start_date_time")
+		if startDateTime == "" {
+			return &mcp.CallToolResult{
+				IsError: true,
+				Content: []mcp.Content{&mcp.TextContent{Text: "start_date_time is required"}},
+			}, nil
+		}
+		convConds = append(convConds, types.FilterCondition{Field: "StartDateTime", Operator: "ge", Value: startDateTime})
+
+		// Required: end_date_time → EndDateTime le
+		endDateTime := getStringArg(args, "end_date_time")
+		if endDateTime == "" {
+			return &mcp.CallToolResult{
+				IsError: true,
+				Content: []mcp.Content{&mcp.TextContent{Text: "end_date_time is required"}},
+			}, nil
+		}
+		convConds = append(convConds, types.FilterCondition{Field: "EndDateTime", Operator: "le", Value: endDateTime})
+
+		// Optional: retrieval_mode (validate against Cyclic|Full)
+		if mode := getOptionalStringArg(args, "retrieval_mode"); mode != nil {
+			if *mode != "Cyclic" && *mode != "Full" {
+				return &mcp.CallToolResult{
+					IsError: true,
+					Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("unsupported retrieval mode: %s", *mode)}},
+				}, nil
+			}
+			convConds = append(convConds, types.FilterCondition{Field: "RetrievalMode", Operator: "eq", Value: *mode})
+		}
+
+		// Optional: resolution_ms
+		if ms := getOptionalIntArg(args, "resolution_ms"); ms != nil {
+			convConds = append(convConds, types.FilterCondition{Field: "Resolution", Operator: "eq", Value: *ms})
+		}
+
+		// Optional: slice_by
+		if sb := getOptionalStringArg(args, "slice_by"); sb != nil {
+			convConds = append(convConds, types.FilterCondition{Field: "SliceBy", Operator: "eq", Value: *sb})
+		}
+
+		// Optional: slice_by_value
+		if sbv := getOptionalStringArg(args, "slice_by_value"); sbv != nil {
+			convConds = append(convConds, types.FilterCondition{Field: "SliceByValue", Operator: "eq", Value: *sbv})
+		}
+
+		// Optional: opc_quality
+		if q := getOptionalIntArg(args, "opc_quality"); q != nil {
+			convConds = append(convConds, types.FilterCondition{Field: "OPCQuality", Operator: "eq", Value: *q})
+		}
+
+		// Optional: percent_good
+		if pg := getOptionalFloatArg(args, "percent_good"); pg != nil {
+			convConds = append(convConds, types.FilterCondition{Field: "PercentGood", Operator: "eq", Value: *pg})
+		}
+
+		// Build filter groups from convConds + user filters
 		var groups []types.FilterGroupDef
-
-		tagID := getStringArg(args, "tag_id")
-		if tagID != "" {
-			groups = append(groups, types.FilterGroupDef{
-				And: []types.FilterCondition{{Field: "FQN", Operator: "eq", Value: tagID}},
-			})
+		if len(convConds) > 0 {
+			groups = append(groups, types.FilterGroupDef{And: convConds})
 		}
-
-		startTime := getStringArg(args, "start_time")
-		endTime := getStringArg(args, "end_time")
-		var timeConds []types.FilterCondition
-		if startTime != "" {
-			timeConds = append(timeConds, types.FilterCondition{Field: "StartDateTime", Operator: "ge", Value: startTime})
-		}
-		if endTime != "" {
-			timeConds = append(timeConds, types.FilterCondition{Field: "EndDateTime", Operator: "le", Value: endTime})
-		}
-		if len(timeConds) > 0 {
-			groups = append(groups, types.FilterGroupDef{And: timeConds})
-		}
-
 		userFilters := parseFilters(args["filters"])
 		groups = append(groups, userFilters...)
 
-		resolutionMS := getIntArg(args, "resolution_ms", 3600000)
-		maxResults := getIntArg(args, "max_results", 100)
-
-		extraParams := endpoints.AnalogSummaryParams{
-			RetrievalMode: getOptionalStringArg(args, "retrieval_mode"),
-			SliceBy:       getOptionalStringArg(args, "slice_by"),
-			SliceByValue:  getOptionalStringArg(args, "slice_by_value"),
-			OPCQuality:    getOptionalIntArg(args, "opc_quality"),
-			PercentGood:   getOptionalFloatArg(args, "percent_good"),
+		// OData system query options
+		topVal := getIntArg(args, "top", 100)
+		opts := types.QueryOptions{
+			Top:     &topVal,
+			Select:  getStringSliceArg(args, "select"),
+			Skip:    getOptionalIntArg(args, "skip"),
+			OrderBy: parseOrderByClauses(args, "orderby"),
+			Count:   getOptionalBoolArg(args, "count"),
+			Search:  getOptionalStringArg(args, "search"),
 		}
 
-		result, err := endpoints.GetAnalogSummary(ctx, client, groups, resolutionMS, maxResults, extraParams)
+		result, err := endpoints.GetAnalogSummary(ctx, client, groups, opts)
 		if err != nil {
 			return &mcp.CallToolResult{
 				IsError: true,
@@ -178,7 +247,7 @@ func RegisterReadAnalogSummary(server *mcp.Server, client *historian.Client, log
 
 		dualJSON, _ := json.Marshal(dualResult)
 
-		logger.Info("read_analog_summary", "rows", len(rows), "tag_id", tagID)
+		logger.Info("read_analog_summary", "rows", len(rows), "fqn", fqn)
 
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{

@@ -18,7 +18,7 @@ func TestClientGetSuccess(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	c := New(ts.URL, "user", "pass", nil)
+	c := New(ts.URL, "user", "pass", "/Historian/v2", nil)
 	var resp ODataResponse[Tag]
 	if err := c.Get(context.Background(), "Tags", "$top=10", &resp); err != nil {
 		t.Fatalf("Get failed: %v", err)
@@ -42,7 +42,7 @@ func TestClientGetNon2xx(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	c := New(ts.URL, "user", "pass", nil)
+	c := New(ts.URL, "user", "pass", "/Historian/v2", nil)
 	var dest json.RawMessage
 	err := c.Get(context.Background(), "Tags", "", &dest)
 	if err == nil {
@@ -58,7 +58,7 @@ func TestClientGetCancellation(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	c := New(ts.URL, "user", "pass", nil)
+	c := New(ts.URL, "user", "pass", "/Historian/v2", nil)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // cancel immediately
 

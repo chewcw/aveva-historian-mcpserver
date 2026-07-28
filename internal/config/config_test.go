@@ -14,6 +14,7 @@ func envCleanup() {
 	os.Unsetenv("MCP_SERVER_NAME")
 	os.Unsetenv("MCP_SERVER_VERSION")
 	os.Unsetenv("LOG_LEVEL")
+	os.Unsetenv("LOG_FILE_PATH")
 }
 
 func TestLoad_Success(t *testing.T) {
@@ -24,7 +25,8 @@ func TestLoad_Success(t *testing.T) {
 		"AVEVA_HISTORIAN_BASE_URL=http://historian:32569\n"+
 			"AVEVA_HISTORIAN_USERNAME=admin\n"+
 			"AVEVA_HISTORIAN_PASSWORD=secret\n"+
-			"LOG_LEVEL=debug\n"), 0644); err != nil {
+			"LOG_LEVEL=debug\n"+
+			"LOG_FILE_PATH=test.log\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -43,6 +45,9 @@ func TestLoad_Success(t *testing.T) {
 	}
 	if cfg.LogLevel != "debug" {
 		t.Errorf("LogLevel = %q, want %q", cfg.LogLevel, "debug")
+	}
+	if cfg.LogFilePath != "test.log" {
+		t.Errorf("LogFilePath = %q, want %q", cfg.LogFilePath, "test.log")
 	}
 }
 

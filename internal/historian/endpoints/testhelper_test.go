@@ -32,7 +32,7 @@ func NewMockServer(t *testing.T, body string) *MockServer {
 		w.WriteHeader(status)
 		_, _ = w.Write([]byte(body))
 	}))
-	m.Client = historian.New(m.URL, "u", "p", nil)
+	m.Client = historian.New(m.URL, "u", "p", "/Historian/v2", nil)
 	t.Cleanup(m.Close)
 	return m
 }
