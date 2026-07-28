@@ -49,6 +49,12 @@ func (c *Client) Get(ctx context.Context, path, query string, dest any) error {
 	req.URL.RawQuery = urlEncodeQueryValues(query)
 	req.Header.Set("Accept", "application/json")
 
+	c.logger.Debug("historian request",
+		"method", req.Method,
+		"url", req.URL.String(),
+		"headers", sanitizeHeaders(req.Header),
+	)
+
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("http request: %w", err)
@@ -59,6 +65,12 @@ func (c *Client) Get(ctx context.Context, path, query string, dest any) error {
 	if err != nil {
 		return fmt.Errorf("read body: %w", err)
 	}
+
+	c.logger.Debug("historian response",
+		"status", resp.StatusCode,
+		"headers", sanitizeHeaders(resp.Header),
+		"body", string(body),
+	)
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		snippet := string(body)
@@ -104,4 +116,17 @@ func urlEncodeQueryValues(rawQuery string) string {
 		parts[i] = key + "=" + url.QueryEscape(val)
 	}
 	return strings.Join(parts, "&")
+}
+
+// sanitizeHeaders returns a copy of h with sensitive values redacted.
+func sanitizeHeaders(h http.Header) http.Header {
+	out := make(http.Header, len(h))
+	for k, v := range h {
+		if k == "Authorization" {
+			out[k] = []string{"***"}
+		} else {
+			out[k] = v
+		}
+	}
+	return out
 }
