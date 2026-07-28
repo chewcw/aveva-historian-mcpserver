@@ -2,6 +2,8 @@ package tools
 
 import (
 	"encoding/json"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -163,4 +165,109 @@ func TestParseArgs(t *testing.T) {
 		t.Errorf("got key=%v", args["key"])
 	}
 
+}
+
+// formatTestRow is a simple JSON-serializable row for testing formatResult.
+type formatTestRow struct {
+	Name  string `json:"name"`
+	Value int    `json:"value"`
+}
+
+func TestFormatResultUnderLimit(t *testing.T) {
+	rows := []formatTestRow{{"a", 1}, {"b", 2}}
+	// each row ~25 bytes, 2 rows ~50 bytes, well under 10000
+	result := formatResult(rows, 10000, func(rows []formatTestRow) string {
+		var b strings.Builder
+		for _, r := range rows {
+			b.WriteString(r.Name)
+		}
+		return b.String()
+	}, "historians://base/tags/id", "tags", nil)
+
+	if len(result.Content) != 1 {
+		t.Fatalf("under limit: want 1 content, got %d", len(result.Content))
+	}
+	tc, ok := result.Content[0].(*mcp.TextContent)
+	if !ok {
+		t.Fatal("under limit: content[0] is not TextContent")
+	}
+	var got []formatTestRow
+	if err := json.Unmarshal([]byte(tc.Text), &got); err != nil {
+		t.Fatalf("under limit: unmarshal: %v", err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("under limit: want 2 rows, got %d", len(got))
+	}
+	if got[0].Name != "a" || got[1].Value != 2 {
+		t.Fatal("under limit: row data mismatch")
+	}
+}
+
+func TestFormatResultOverLimit(t *testing.T) {
+	rows := make([]formatTestRow, 10)
+	for i := range rows {
+		rows[i] = formatTestRow{fmt.Sprintf("k%d", i), i}
+	}
+	// 10 rows ~300 bytes, limit=50 forces preview
+	result := formatResult(rows, 50, func(rows []formatTestRow) string {
+		return fmt.Sprintf("%d rows", len(rows))
+	}, "historians://base/summary/id", "summary", nil)
+
+	if len(result.Content) != 2 {
+		t.Fatalf("over limit: want 2 content, got %d", len(result.Content))
+	}
+	// Check TextContent is DualToolResult JSON
+	tc, ok := result.Content[0].(*mcp.TextContent)
+	if !ok {
+		t.Fatal("over limit: content[0] not TextContent")
+	}
+	var dual map[string]any
+	if err := json.Unmarshal([]byte(tc.Text), &dual); err != nil {
+		t.Fatalf("over limit: unmarshal dual: %v", err)
+	}
+	if preview := dual["preview"]; preview != "10 rows" {
+		t.Fatalf("over limit: preview=%q, want %q", preview, "10 rows")
+	}
+	if rc := int(dual["rowCount"].(float64)); rc != 10 {
+		t.Fatalf("over limit: rowCount=%d, want 10", rc)
+	}
+	if uri := dual["resourceUri"]; uri != "historians://base/summary/id" {
+		t.Fatalf("over limit: resourceUri=%q", uri)
+	}
+	// Check ResourceLink
+	rl, ok := result.Content[1].(*mcp.ResourceLink)
+	if !ok {
+		t.Fatal("over limit: content[1] not ResourceLink")
+	}
+	if rl.URI != "historians://base/summary/id" {
+		t.Fatalf("over limit: link URI=%q", rl.URI)
+	}
+}
+
+func TestFormatResultEmpty(t *testing.T) {
+	result := formatResult([]formatTestRow{}, 1000, func(rows []formatTestRow) string {
+		return "preview"
+	}, "uri://test", "t", nil)
+
+	if len(result.Content) != 1 {
+		t.Fatalf("empty: want 1 content, got %d", len(result.Content))
+	}
+	tc, ok := result.Content[0].(*mcp.TextContent)
+	if !ok {
+		t.Fatal("empty: content[0] not TextContent")
+	}
+	if tc.Text != "[]" {
+		t.Fatalf("empty: want '[]', got %q", tc.Text)
+	}
+}
+
+func TestFormatResultZeroLimit(t *testing.T) {
+	// limit <= 0 always triggers preview
+	result := formatResult([]formatTestRow{{"x", 1}}, 0, func(rows []formatTestRow) string {
+		return "preview-data"
+	}, "uri://test", "t", nil)
+
+	if len(result.Content) != 2 {
+		t.Fatalf("zero limit: want 2 content, got %d", len(result.Content))
+	}
 }

@@ -2,7 +2,6 @@ package tools
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -14,7 +13,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-func RegisterReadProcessValues(server *mcp.Server, client *historian.Client, logger *slog.Logger) {
+func RegisterReadProcessValues(server *mcp.Server, client *historian.Client, logger *slog.Logger, byteLimit int) {
 	logger = logger.With("tool", "read_process_values")
 	inputSchema := map[string]any{
 		"type": "object",
@@ -205,38 +204,22 @@ func RegisterReadProcessValues(server *mcp.Server, client *historian.Client, log
 		if rows == nil {
 			rows = []historian.ProcessValue{}
 		}
-		capped := capRows(rows, 100)
-
-		var preview strings.Builder
-		preview.WriteString("| FQN | DateTime | Value | OpcQuality | Unit |\n")
-		preview.WriteString("|-----|----------|-------|------------|------|\n")
-		for _, pv := range capped {
-			fmt.Fprintf(&preview, "| %s | %s | %s | %s | %s |\n",
-				pv.FQN, pv.DateTime, floatPtrStr(pv.Value),
-				intPtrStr(pv.OpcQuality), pv.Unit)
-		}
 
 		resourceURI := fmt.Sprintf("historians://%s/trends/%s", client.BaseURL(), uuid.New().String())
 
-		dualResult := types.DualToolResult{
-			Preview:     preview.String(),
-			RowCount:    len(capped),
-			ResourceURI: resourceURI,
-		}
-		if result.Count != nil {
-			dualResult.TotalCount = result.Count
-		}
-
-		dualJSON, _ := json.Marshal(dualResult)
-
 		logger.Info("ok", "rows", len(rows), "fqn", fqn)
 
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				&mcp.TextContent{Text: string(dualJSON)},
-				&mcp.ResourceLink{URI: resourceURI, Name: "trends"},
-			},
-		}, nil
+		return formatResult(rows, byteLimit, func(rows []historian.ProcessValue) string {
+			var preview strings.Builder
+			preview.WriteString("| FQN | DateTime | Value | OpcQuality | Unit |\n")
+			preview.WriteString("|-----|----------|-------|------------|------|\n")
+			for _, pv := range rows {
+				fmt.Fprintf(&preview, "| %s | %s | %s | %s | %s |\n",
+					pv.FQN, pv.DateTime, floatPtrStr(pv.Value),
+					intPtrStr(pv.OpcQuality), pv.Unit)
+			}
+			return preview.String()
+		}, resourceURI, "trends", result.Count), nil
 	})
 }
 

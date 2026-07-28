@@ -16,8 +16,9 @@ func NewServer(cfg *config.Config, client *historian.Client, logger *slog.Logger
 	}
 	server := mcp.NewServer(&mcp.Implementation{Name: cfg.ServerName}, nil)
 	logger = logger.With("source", "mcp.Server")
-	tools.RegisterGetTags(server, client, logger)
-	tools.RegisterReadProcessValues(server, client, logger)
-	tools.RegisterReadAnalogSummary(server, client, logger)
+	limit := cfg.ResultByteLimit
+	tools.RegisterGetTags(server, client, logger, limit)
+	tools.RegisterReadProcessValues(server, client, logger, limit)
+	tools.RegisterReadAnalogSummary(server, client, logger, limit)
 	return server
 }

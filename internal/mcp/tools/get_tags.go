@@ -2,7 +2,6 @@ package tools
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -14,7 +13,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-func RegisterGetTags(server *mcp.Server, client *historian.Client, logger *slog.Logger) {
+func RegisterGetTags(server *mcp.Server, client *historian.Client, logger *slog.Logger, byteLimit int) {
 	logger = logger.With("tool", "get_tags")
 	inputSchema := map[string]any{
 		"type": "object",
@@ -179,36 +178,20 @@ func RegisterGetTags(server *mcp.Server, client *historian.Client, logger *slog.
 		if rows == nil {
 			rows = []historian.Tag{}
 		}
-		capped := capRows(rows, 100)
-
-		var preview strings.Builder
-		preview.WriteString("| TagName | FQN | Type | EngUnit | Description |\n")
-		preview.WriteString("|---------|-----|------|--------|-------------|\n")
-		for _, t := range capped {
-			fmt.Fprintf(&preview, "| %s | %s | %s | %s | %s |\n",
-				t.TagName, t.FQN, t.TagType, t.EngUnit, t.Description)
-		}
 
 		resourceURI := fmt.Sprintf("historians://%s/tags/%s", client.BaseURL(), uuid.New().String())
 
-		dualResult := types.DualToolResult{
-			Preview:     preview.String(),
-			RowCount:    len(capped),
-			ResourceURI: resourceURI,
-		}
-		if result.Count != nil {
-			dualResult.TotalCount = result.Count
-		}
-
-		dualJSON, _ := json.Marshal(dualResult)
-
 		logger.Info("ok", "rows", len(rows), "top", topVal)
 
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				&mcp.TextContent{Text: string(dualJSON)},
-				&mcp.ResourceLink{URI: resourceURI, Name: "tags"},
-			},
-		}, nil
+		return formatResult(rows, byteLimit, func(rows []historian.Tag) string {
+			var preview strings.Builder
+			preview.WriteString("| TagName | FQN | Type | EngUnit | Description |\n")
+			preview.WriteString("|---------|-----|------|--------|-------------|\n")
+			for _, t := range rows {
+				fmt.Fprintf(&preview, "| %s | %s | %s | %s | %s |\n",
+					t.TagName, t.FQN, t.TagType, t.EngUnit, t.Description)
+			}
+			return preview.String()
+		}, resourceURI, "tags", result.Count), nil
 	})
 }

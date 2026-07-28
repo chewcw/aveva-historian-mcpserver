@@ -218,6 +218,42 @@ func getStringSliceArg(args map[string]any, name string) []string {
 
 // parseOrderByClauses parses an array of {"field": ..., "direction": ...} objects.
 // Returns nil (zero value) if missing or not a valid array.
+// formatResult returns full JSON if rows fit within limit, otherwise a preview.
+func formatResult[T any](
+	rows []T,
+	limit int,
+	buildPreview func([]T) string,
+	resourceURI string,
+	linkName string,
+	count *int,
+) *mcp.CallToolResult {
+	fullJSON, err := json.Marshal(rows)
+	if err != nil || len(fullJSON) > limit {
+		capped := capRows(rows, 100)
+		preview := buildPreview(capped)
+		dual := types.DualToolResult{
+			Preview:     preview,
+			RowCount:    len(capped),
+			ResourceURI: resourceURI,
+		}
+		if count != nil {
+			dual.TotalCount = count
+		}
+		dualJSON, _ := json.Marshal(dual)
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: string(dualJSON)},
+				&mcp.ResourceLink{URI: resourceURI, Name: linkName},
+			},
+		}
+	}
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: string(fullJSON)},
+		},
+	}
+}
+
 func parseOrderByClauses(args map[string]any, name string) []types.OrderByClause {
 	if args == nil {
 		return nil

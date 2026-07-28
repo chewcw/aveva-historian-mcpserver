@@ -2,7 +2,6 @@ package tools
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -14,7 +13,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-func RegisterReadAnalogSummary(server *mcp.Server, client *historian.Client, logger *slog.Logger) {
+func RegisterReadAnalogSummary(server *mcp.Server, client *historian.Client, logger *slog.Logger, byteLimit int) {
 	logger = logger.With("tool", "read_analog_summary")
 	inputSchema := map[string]any{
 		"type": "object",
@@ -221,40 +220,24 @@ func RegisterReadAnalogSummary(server *mcp.Server, client *historian.Client, log
 		if rows == nil {
 			rows = []historian.AnalogSummaryValue{}
 		}
-		capped := capRows(rows, 100)
-
-		var preview strings.Builder
-		preview.WriteString("| FQN | StartDateTime | EndDateTime | Min | Max | Avg | StdDev | Integral | Count | First | Last |\n")
-		preview.WriteString("|-----|--------------|------------|-----|-----|-----|-------|---------|-------|-------|------|\n")
-		for _, s := range capped {
-			fmt.Fprintf(&preview, "| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |\n",
-				s.FQN, s.StartDateTime, s.EndDateTime,
-				floatPtrStr(s.Minimum), floatPtrStr(s.Maximum),
-				floatPtrStr(s.Average), floatPtrStr(s.StdDev),
-				floatPtrStr(s.Integral), intPtrStr(s.Count),
-				floatPtrStr(s.First), floatPtrStr(s.Last))
-		}
 
 		resourceURI := fmt.Sprintf("historians://%s/summary/%s", client.BaseURL(), uuid.New().String())
 
-		dualResult := types.DualToolResult{
-			Preview:     preview.String(),
-			RowCount:    len(capped),
-			ResourceURI: resourceURI,
-		}
-		if result.Count != nil {
-			dualResult.TotalCount = result.Count
-		}
-
-		dualJSON, _ := json.Marshal(dualResult)
-
 		logger.Info("ok", "rows", len(rows), "fqn", fqn)
 
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				&mcp.TextContent{Text: string(dualJSON)},
-				&mcp.ResourceLink{URI: resourceURI, Name: "analog-summary"},
-			},
-		}, nil
+		return formatResult(rows, byteLimit, func(rows []historian.AnalogSummaryValue) string {
+			var preview strings.Builder
+			preview.WriteString("| FQN | StartDateTime | EndDateTime | Min | Max | Avg | StdDev | Integral | Count | First | Last |\n")
+			preview.WriteString("|-----|--------------|------------|-----|-----|-----|-------|---------|-------|-------|------|\n")
+			for _, s := range rows {
+				fmt.Fprintf(&preview, "| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |\n",
+					s.FQN, s.StartDateTime, s.EndDateTime,
+					floatPtrStr(s.Minimum), floatPtrStr(s.Maximum),
+					floatPtrStr(s.Average), floatPtrStr(s.StdDev),
+					floatPtrStr(s.Integral), intPtrStr(s.Count),
+					floatPtrStr(s.First), floatPtrStr(s.Last))
+			}
+			return preview.String()
+		}, resourceURI, "analog-summary", result.Count), nil
 	})
 }

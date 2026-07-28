@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -14,8 +15,9 @@ type Config struct {
 	Password      string
 	ServerName    string
 	ServerVersion string
-	LogLevel      string
-	LogFilePath   string
+	LogLevel        string
+	LogFilePath      string
+	ResultByteLimit int
 }
 
 func Load(path string) (*Config, error) {
@@ -51,6 +53,18 @@ func loadFromEnv() (*Config, error) {
 	cfg.BaseURL = os.Getenv("AVEVA_HISTORIAN_BASE_URL")
 	cfg.Username = os.Getenv("AVEVA_HISTORIAN_USERNAME")
 	cfg.Password = os.Getenv("AVEVA_HISTORIAN_PASSWORD")
+
+	const defaultResultByteLimit = 1_048_576
+	raw := os.Getenv("AVEVA_HISTORIAN_RESULT_BYTE_LIMIT")
+	if raw != "" {
+		if v, err := strconv.Atoi(raw); err == nil && v > 0 {
+			cfg.ResultByteLimit = v
+		} else {
+			cfg.ResultByteLimit = defaultResultByteLimit
+		}
+	} else {
+		cfg.ResultByteLimit = defaultResultByteLimit
+	}
 
 	var missing []string
 	if cfg.BaseURL == "" {
