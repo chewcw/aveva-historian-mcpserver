@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Config struct {
@@ -18,6 +19,11 @@ type Config struct {
 	LogLevel        string
 	LogFilePath      string
 	ResultByteLimit int
+
+	DataServerBind       string        // default "127.0.0.1"
+	DataServerPort       int           // default 8199
+	DataServerDefaultTTL time.Duration // default 5m
+	DataServerGCInterval time.Duration // default 1m
 }
 
 func Load(path string) (*Config, error) {
@@ -66,6 +72,11 @@ func loadFromEnv() (*Config, error) {
 		cfg.ResultByteLimit = defaultResultByteLimit
 	}
 
+	cfg.DataServerBind = defaultStr(os.Getenv("DATA_SERVER_BIND"), "127.0.0.1")
+	cfg.DataServerPort = defaultInt(os.Getenv("DATA_SERVER_PORT"), 8199)
+	cfg.DataServerDefaultTTL = defaultDuration(os.Getenv("DATA_SERVER_DEFAULT_TTL"), 5*time.Minute)
+	cfg.DataServerGCInterval = defaultDuration(os.Getenv("DATA_SERVER_GC_INTERVAL"), 1*time.Minute)
+
 	var missing []string
 	if cfg.BaseURL == "" {
 		missing = append(missing, "AVEVA_HISTORIAN_BASE_URL")
@@ -91,4 +102,24 @@ func defaultStr(val, def string) string {
 		return def
 	}
 	return val
+}
+
+func defaultInt(s string, def int) int {
+	if s == "" {
+		return def
+	}
+	if v, err := strconv.Atoi(s); err == nil && v > 0 {
+		return v
+	}
+	return def
+}
+
+func defaultDuration(s string, def time.Duration) time.Duration {
+	if s == "" {
+		return def
+	}
+	if v, err := time.ParseDuration(s); err == nil && v > 0 {
+		return v
+	}
+	return def
 }

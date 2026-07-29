@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 // envCleanup unsets all known env vars so each test starts from a clean slate.
@@ -15,6 +16,10 @@ func envCleanup() {
 	os.Unsetenv("MCP_SERVER_VERSION")
 	os.Unsetenv("LOG_LEVEL")
 	os.Unsetenv("LOG_FILE_PATH")
+	os.Unsetenv("DATA_SERVER_BIND")
+	os.Unsetenv("DATA_SERVER_PORT")
+	os.Unsetenv("DATA_SERVER_DEFAULT_TTL")
+	os.Unsetenv("DATA_SERVER_GC_INTERVAL")
 }
 
 func TestLoad_Success(t *testing.T) {
@@ -118,5 +123,55 @@ func TestLoad_DefaultsApplied(t *testing.T) {
 	}
 	if cfg.LogLevel != "info" {
 		t.Errorf("LogLevel = %q, want %q", cfg.LogLevel, "info")
+	}
+}
+
+func TestConfigDataServerDefaults(t *testing.T) {
+	t.Setenv("AVEVA_HISTORIAN_BASE_URL", "http://localhost")
+	t.Setenv("AVEVA_HISTORIAN_USERNAME", "user")
+	t.Setenv("AVEVA_HISTORIAN_PASSWORD", "pass")
+
+	cfg, err := Load(".env.nonexistent")
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.DataServerBind != "127.0.0.1" {
+		t.Errorf("DataServerBind = %q, want 127.0.0.1", cfg.DataServerBind)
+	}
+	if cfg.DataServerPort != 8199 {
+		t.Errorf("DataServerPort = %d, want 8199", cfg.DataServerPort)
+	}
+	if cfg.DataServerDefaultTTL != 5*time.Minute {
+		t.Errorf("DataServerDefaultTTL = %v, want 5m0s", cfg.DataServerDefaultTTL)
+	}
+	if cfg.DataServerGCInterval != 1*time.Minute {
+		t.Errorf("DataServerGCInterval = %v, want 1m0s", cfg.DataServerGCInterval)
+	}
+}
+
+func TestConfigDataServerOverrides(t *testing.T) {
+	t.Setenv("AVEVA_HISTORIAN_BASE_URL", "http://localhost")
+	t.Setenv("AVEVA_HISTORIAN_USERNAME", "user")
+	t.Setenv("AVEVA_HISTORIAN_PASSWORD", "pass")
+	t.Setenv("DATA_SERVER_BIND", "0.0.0.0")
+	t.Setenv("DATA_SERVER_PORT", "9090")
+	t.Setenv("DATA_SERVER_DEFAULT_TTL", "10m")
+	t.Setenv("DATA_SERVER_GC_INTERVAL", "30s")
+
+	cfg, err := Load(".env.nonexistent")
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.DataServerBind != "0.0.0.0" {
+		t.Errorf("DataServerBind = %q, want 0.0.0.0", cfg.DataServerBind)
+	}
+	if cfg.DataServerPort != 9090 {
+		t.Errorf("DataServerPort = %d, want 9090", cfg.DataServerPort)
+	}
+	if cfg.DataServerDefaultTTL != 10*time.Minute {
+		t.Errorf("DataServerDefaultTTL = %v, want 10m0s", cfg.DataServerDefaultTTL)
+	}
+	if cfg.DataServerGCInterval != 30*time.Second {
+		t.Errorf("DataServerGCInterval = %v, want 30s", cfg.DataServerGCInterval)
 	}
 }
