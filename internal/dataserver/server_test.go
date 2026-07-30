@@ -15,7 +15,7 @@ import (
 
 func setupTestServer(t *testing.T) (*Store, *httptest.Server) {
 	t.Helper()
-	store := NewStore(5*time.Minute, time.Minute)
+	store := NewStore(5 * time.Minute)
 	mux := http.NewServeMux()
 	s := &server{store: store, logger: slog.Default()}
 	mux.HandleFunc("GET /resources", s.handleList)

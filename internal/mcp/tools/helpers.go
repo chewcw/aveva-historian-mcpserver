@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/chewcw/aveva-historian-mcpserver/internal/dataserver"
 	"github.com/chewcw/aveva-historian-mcpserver/internal/types"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -252,6 +253,19 @@ func formatResult[T any](
 			&mcp.TextContent{Text: string(fullJSON)},
 		},
 	}
+}
+
+// PushResult stores a full dataset in the data server and returns its ResourceURI.
+// If store is nil (data server unavailable), returns empty URI without error.
+func PushResult(store *dataserver.Store, baseURL, label string, columns []dataserver.Field, rows [][]string) (string, error) {
+	if store == nil {
+		return "", nil // data server not available, skip
+	}
+	res, err := store.Put(label, "application/json", columns, rows)
+	if err != nil {
+		return "", fmt.Errorf("push to data server: %w", err)
+	}
+	return fmt.Sprintf("%s/resources/%s", strings.TrimRight(baseURL, "/"), res.ID), nil
 }
 
 func parseOrderByClauses(args map[string]any, name string) []types.OrderByClause {
