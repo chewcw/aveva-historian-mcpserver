@@ -182,7 +182,12 @@ func RegisterGetTags(server *mcp.Server, client *historian.Client, store *datase
 		// Build full dataset for data server
 		allRows := make([][]string, 0, len(rows))
 		for _, t := range rows {
-			allRows = append(allRows, []string{t.FQN, t.TagName, t.Description, t.EngUnit, t.TagType, t.Source})
+				allRows = append(allRows, []string{
+				t.FQN, t.TagName, t.TagType, t.EngUnit, t.Source,
+				floatPtrStr(t.EngUnitMax), floatPtrStr(t.EngUnitMin),
+				t.InterpolationType, t.MessageOff, t.MessageOn,
+				t.Alias, t.Description,
+			})
 		}
 
 		resourceURI, err := PushResult(store, dataServerBaseURL,
@@ -190,10 +195,16 @@ func RegisterGetTags(server *mcp.Server, client *historian.Client, store *datase
 			[]dataserver.Field{
 				{Name: "FQN", Type: "string"},
 				{Name: "TagName", Type: "string"},
-				{Name: "Description", Type: "string"},
-				{Name: "EngUnit", Type: "string"},
 				{Name: "TagType", Type: "string"},
+				{Name: "EngUnit", Type: "string"},
 				{Name: "Source", Type: "string"},
+				{Name: "EngUnitMax", Type: "number"},
+				{Name: "EngUnitMin", Type: "number"},
+				{Name: "InterpolationType", Type: "string"},
+				{Name: "MessageOff", Type: "string"},
+				{Name: "MessageOn", Type: "string"},
+				{Name: "Alias", Type: "string"},
+				{Name: "Description", Type: "string"},
 			},
 			allRows)
 		if err != nil {
@@ -205,11 +216,14 @@ func RegisterGetTags(server *mcp.Server, client *historian.Client, store *datase
 
 		return formatResult(rows, byteLimit, func(rows []historian.Tag) string {
 			var preview strings.Builder
-			preview.WriteString("| TagName | FQN | Type | EngUnit | Description |\n")
-			preview.WriteString("|---------|-----|------|--------|-------------|\n")
+			preview.WriteString("| FQN | TagName | TagType | EngUnit | Source | EngUnitMax | EngUnitMin | InterpolationType | MessageOff | MessageOn | Alias | Description |\n")
+			preview.WriteString("|-----|---------|---------|--------|--------|------------|------------|-------------------|------------|-----------|-------|-------------|\n")
 			for _, t := range rows {
-				fmt.Fprintf(&preview, "| %s | %s | %s | %s | %s |\n",
-					t.TagName, t.FQN, t.TagType, t.EngUnit, t.Description)
+				fmt.Fprintf(&preview, "| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |\n",
+					t.FQN, t.TagName, t.TagType, t.EngUnit, t.Source,
+					floatPtrStr(t.EngUnitMax), floatPtrStr(t.EngUnitMin),
+					t.InterpolationType, t.MessageOff, t.MessageOn,
+					t.Alias, t.Description)
 			}
 			return preview.String()
 		}, resourceURI, "tags", result.Count), nil

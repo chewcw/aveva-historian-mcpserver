@@ -48,7 +48,7 @@ func RegisterReadAnalogSummary(server *mcp.Server, client *historian.Client, sto
 				"type":        "string",
 				"description": "Comma-separated fields to include in results (optional)",
 			},
-			"skip":     map[string]any{"type": "number", "description": "Rows to skip (optional)"},
+			"skip": map[string]any{"type": "number", "description": "Rows to skip (optional)"},
 			"orderby": map[string]any{
 				"type":        "array",
 				"description": "Sort criteria. Array of {field: string, direction: \"asc\"|\"desc\"} (optional)",

@@ -139,7 +139,7 @@ func TestIntPtrStr(t *testing.T) {
 }
 
 func ptrFloat(v float64) *float64 { return &v }
-func ptrInt(v int) *int          { return &v }
+func ptrInt(v int) *int           { return &v }
 
 func TestParseArgs(t *testing.T) {
 	// nil arguments

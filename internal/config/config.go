@@ -10,14 +10,14 @@ import (
 )
 
 type Config struct {
-	APIPathPrefix string
-	BaseURL       string
-	Username      string
-	Password      string
-	ServerName    string
-	ServerVersion string
+	APIPathPrefix   string
+	BaseURL         string
+	Username        string
+	Password        string
+	ServerName      string
+	ServerVersion   string
 	LogLevel        string
-	LogFilePath      string
+	LogFilePath     string
 	ResultByteLimit int
 
 	DataServerBind       string        // default "127.0.0.1"
