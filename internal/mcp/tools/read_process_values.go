@@ -208,7 +208,9 @@ func RegisterReadProcessValues(server *mcp.Server, client *historian.Client, sto
 		// Build full dataset for data server
 		allRows := make([][]string, 0, len(rows))
 		for _, pv := range rows {
-			allRows = append(allRows, []string{pv.FQN, pv.DateTime, floatPtrStr(pv.Value), pv.Unit, intPtrStr(pv.OpcQuality)})
+			allRows = append(allRows, []string{
+        pv.FQN, pv.DateTime, floatPtrStr(pv.Value), intPtrStr(pv.OpcQuality),
+        strPtrStr(pv.Text), pv.Unit})
 		}
 
 		resourceURI, err := PushResult(store, dataServerBaseURL,
@@ -217,8 +219,9 @@ func RegisterReadProcessValues(server *mcp.Server, client *historian.Client, sto
 				{Name: "FQN", Type: "string"},
 				{Name: "DateTime", Type: "datetime"},
 				{Name: "Value", Type: "number"},
-				{Name: "Unit", Type: "string"},
 				{Name: "OpcQuality", Type: "string"},
+				{Name: "Text", Type: "string"},
+				{Name: "Unit", Type: "string"},
 			},
 			allRows)
 		if err != nil {

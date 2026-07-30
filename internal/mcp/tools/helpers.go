@@ -195,6 +195,14 @@ func intPtrStr(p *int) string {
 	return fmt.Sprintf("%d", *p)
 }
 
+// strPtrStr returns the string value, or "" if p is nil.
+func strPtrStr(p *string) string {
+	if p == nil {
+		return ""
+	}
+	return *p
+}
+
 // getStringSliceArg returns []string from a JSON array arg, or nil if missing or not an array.
 func getStringSliceArg(args map[string]any, name string) []string {
 	if args == nil {
