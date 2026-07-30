@@ -10,7 +10,6 @@ import (
 	"github.com/chewcw/aveva-historian-mcpserver/internal/historian"
 	"github.com/chewcw/aveva-historian-mcpserver/internal/historian/endpoints"
 	"github.com/chewcw/aveva-historian-mcpserver/internal/types"
-	"github.com/google/uuid"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -222,7 +221,29 @@ func RegisterReadAnalogSummary(server *mcp.Server, client *historian.Client, sto
 			rows = []historian.AnalogSummaryValue{}
 		}
 
-		resourceURI := fmt.Sprintf("historians://%s/summary/%s", client.BaseURL(), uuid.New().String())
+		// Build full dataset for data server
+		allRows := make([][]string, 0, len(rows))
+		for _, s := range rows {
+			allRows = append(allRows, []string{s.FQN, s.StartDateTime, intPtrStr(s.Count), floatPtrStr(s.PercentGood), floatPtrStr(s.Average), floatPtrStr(s.Minimum), floatPtrStr(s.Maximum), floatPtrStr(s.StdDev)})
+		}
+
+		resourceURI, err := PushResult(store, dataServerBaseURL,
+			fmt.Sprintf("AnalogSummary: %s", fqn),
+			[]dataserver.Field{
+				{Name: "FQN", Type: "string"},
+				{Name: "StartDateTime", Type: "datetime"},
+				{Name: "TotalCount", Type: "number"},
+				{Name: "PercentGood", Type: "number"},
+				{Name: "Average", Type: "number"},
+				{Name: "Minimum", Type: "number"},
+				{Name: "Maximum", Type: "number"},
+				{Name: "StandardDeviation", Type: "number"},
+			},
+			allRows)
+		if err != nil {
+			logger.Warn("failed to push result to data server", "error", err)
+			resourceURI = ""
+		}
 
 		logger.Info("ok", "rows", len(rows), "fqn", fqn)
 

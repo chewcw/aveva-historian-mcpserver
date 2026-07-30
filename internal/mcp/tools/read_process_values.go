@@ -10,7 +10,6 @@ import (
 	"github.com/chewcw/aveva-historian-mcpserver/internal/historian"
 	"github.com/chewcw/aveva-historian-mcpserver/internal/historian/endpoints"
 	"github.com/chewcw/aveva-historian-mcpserver/internal/types"
-	"github.com/google/uuid"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -206,7 +205,26 @@ func RegisterReadProcessValues(server *mcp.Server, client *historian.Client, sto
 			rows = []historian.ProcessValue{}
 		}
 
-		resourceURI := fmt.Sprintf("historians://%s/trends/%s", client.BaseURL(), uuid.New().String())
+		// Build full dataset for data server
+		allRows := make([][]string, 0, len(rows))
+		for _, pv := range rows {
+			allRows = append(allRows, []string{pv.FQN, pv.DateTime, floatPtrStr(pv.Value), pv.Unit, intPtrStr(pv.OpcQuality)})
+		}
+
+		resourceURI, err := PushResult(store, dataServerBaseURL,
+			fmt.Sprintf("ProcessValues: %s", fqn),
+			[]dataserver.Field{
+				{Name: "FQN", Type: "string"},
+				{Name: "DateTime", Type: "datetime"},
+				{Name: "Value", Type: "number"},
+				{Name: "Unit", Type: "string"},
+				{Name: "OpcQuality", Type: "string"},
+			},
+			allRows)
+		if err != nil {
+			logger.Warn("failed to push result to data server", "error", err)
+			resourceURI = ""
+		}
 
 		logger.Info("ok", "rows", len(rows), "fqn", fqn)
 

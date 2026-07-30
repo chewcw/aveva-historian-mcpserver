@@ -10,7 +10,6 @@ import (
 	"github.com/chewcw/aveva-historian-mcpserver/internal/historian"
 	"github.com/chewcw/aveva-historian-mcpserver/internal/historian/endpoints"
 	"github.com/chewcw/aveva-historian-mcpserver/internal/types"
-	"github.com/google/uuid"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -180,7 +179,27 @@ func RegisterGetTags(server *mcp.Server, client *historian.Client, store *datase
 			rows = []historian.Tag{}
 		}
 
-		resourceURI := fmt.Sprintf("historians://%s/tags/%s", client.BaseURL(), uuid.New().String())
+		// Build full dataset for data server
+		allRows := make([][]string, 0, len(rows))
+		for _, t := range rows {
+			allRows = append(allRows, []string{t.FQN, t.TagName, t.Description, t.EngUnit, t.TagType, t.Source})
+		}
+
+		resourceURI, err := PushResult(store, dataServerBaseURL,
+			fmt.Sprintf("Tags: %s", "query"),
+			[]dataserver.Field{
+				{Name: "FQN", Type: "string"},
+				{Name: "TagName", Type: "string"},
+				{Name: "Description", Type: "string"},
+				{Name: "EngUnit", Type: "string"},
+				{Name: "TagType", Type: "string"},
+				{Name: "Source", Type: "string"},
+			},
+			allRows)
+		if err != nil {
+			logger.Warn("failed to push result to data server", "error", err)
+			resourceURI = ""
+		}
 
 		logger.Info("ok", "rows", len(rows), "top", topVal)
 
