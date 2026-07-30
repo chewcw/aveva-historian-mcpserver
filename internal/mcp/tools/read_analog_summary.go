@@ -224,7 +224,17 @@ func RegisterReadAnalogSummary(server *mcp.Server, client *historian.Client, sto
 		// Build full dataset for data server
 		allRows := make([][]string, 0, len(rows))
 		for _, s := range rows {
-			allRows = append(allRows, []string{s.FQN, s.StartDateTime, intPtrStr(s.Count), floatPtrStr(s.PercentGood), floatPtrStr(s.Average), floatPtrStr(s.Minimum), floatPtrStr(s.Maximum), floatPtrStr(s.StdDev)})
+			allRows = append(allRows, []string{
+				s.FQN, s.StartDateTime, s.EndDateTime, s.RetrievalMode,
+				intPtrStr(s.Resolution), s.SliceBy, s.SliceByValue,
+				intPtrStr(s.OPCQuality), floatPtrStr(s.PercentGood),
+				floatPtrStr(s.First), s.FirstDateTime,
+				floatPtrStr(s.Last), s.LastDateTime,
+				floatPtrStr(s.Minimum), s.MinDateTime,
+				floatPtrStr(s.Maximum), s.MaxDateTime,
+				floatPtrStr(s.Average), floatPtrStr(s.StdDev),
+				floatPtrStr(s.Integral), intPtrStr(s.Count),
+			})
 		}
 
 		resourceURI, err := PushResult(store, dataServerBaseURL,
@@ -232,12 +242,25 @@ func RegisterReadAnalogSummary(server *mcp.Server, client *historian.Client, sto
 			[]dataserver.Field{
 				{Name: "FQN", Type: "string"},
 				{Name: "StartDateTime", Type: "datetime"},
-				{Name: "TotalCount", Type: "number"},
+				{Name: "EndDateTime", Type: "datetime"},
+				{Name: "RetrievalMode", Type: "string"},
+				{Name: "Resolution", Type: "number"},
+				{Name: "SliceBy", Type: "string"},
+				{Name: "SliceByValue", Type: "string"},
+				{Name: "OPCQuality", Type: "number"},
 				{Name: "PercentGood", Type: "number"},
-				{Name: "Average", Type: "number"},
+				{Name: "First", Type: "number"},
+				{Name: "FirstDateTime", Type: "datetime"},
+				{Name: "Last", Type: "number"},
+				{Name: "LastDateTime", Type: "datetime"},
 				{Name: "Minimum", Type: "number"},
+				{Name: "MinDateTime", Type: "datetime"},
 				{Name: "Maximum", Type: "number"},
+				{Name: "MaxDateTime", Type: "datetime"},
+				{Name: "Average", Type: "number"},
 				{Name: "StandardDeviation", Type: "number"},
+				{Name: "Integral", Type: "number"},
+				{Name: "Count", Type: "number"},
 			},
 			allRows)
 		if err != nil {
