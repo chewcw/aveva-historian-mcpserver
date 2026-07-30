@@ -7,6 +7,7 @@ import (
 	"os/signal"
 
 	"github.com/chewcw/aveva-historian-mcpserver/internal/config"
+	"github.com/chewcw/aveva-historian-mcpserver/internal/dataserver"
 	"github.com/chewcw/aveva-historian-mcpserver/internal/historian"
 	"github.com/chewcw/aveva-historian-mcpserver/internal/logging"
 	mcpserver "github.com/chewcw/aveva-historian-mcpserver/internal/mcp"
@@ -23,7 +24,19 @@ func main() {
 
 	logger := logging.New(cfg.LogLevel, cfg.LogFilePath)
 	client := historian.New(cfg.BaseURL, cfg.Username, cfg.Password, cfg.APIPathPrefix, logger)
-	server := mcpserver.NewServer(cfg, client, logger)
+
+	// Start data server
+	store := dataserver.NewStore(cfg.DataServerDefaultTTL, cfg.DataServerGCInterval)
+	defer store.Stop()
+	dataServerCtx, stopDataServer := context.WithCancel(context.Background())
+	defer stopDataServer()
+	go func() {
+		if err := dataserver.Start(dataServerCtx, store, cfg.DataServerBind, cfg.DataServerPort, logger); err != nil {
+			logger.Warn("data server exited", "error", err)
+		}
+	}()
+
+	server := mcpserver.NewServer(cfg, client, store, logger)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()

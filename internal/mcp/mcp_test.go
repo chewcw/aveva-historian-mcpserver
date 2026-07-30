@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/chewcw/aveva-historian-mcpserver/internal/config"
+	"github.com/chewcw/aveva-historian-mcpserver/internal/dataserver"
 	"github.com/chewcw/aveva-historian-mcpserver/internal/historian"
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -14,7 +15,7 @@ func TestNewServerCreatesWithThreeTools(t *testing.T) {
 		ServerName: "test-server",
 	}
 	client := historian.New(cfg.BaseURL, "u", "p", "/Historian/v2", nil)
-	srv := NewServer(cfg, client, nil)
+	srv := NewServer(cfg, client, (*dataserver.Store)(nil), nil)
 
 	if srv == nil {
 		t.Fatal("NewServer returned nil")

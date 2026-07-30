@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/chewcw/aveva-historian-mcpserver/internal/dataserver"
 	"github.com/chewcw/aveva-historian-mcpserver/internal/historian"
 	"github.com/chewcw/aveva-historian-mcpserver/internal/historian/endpoints"
 	"github.com/chewcw/aveva-historian-mcpserver/internal/types"
@@ -13,8 +14,9 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-func RegisterReadAnalogSummary(server *mcp.Server, client *historian.Client, logger *slog.Logger, byteLimit int) {
+func RegisterReadAnalogSummary(server *mcp.Server, client *historian.Client, store *dataserver.Store, baseURL string, logger *slog.Logger, byteLimit int) {
 	logger = logger.With("tool", "read_analog_summary")
+	_ = store; _ = baseURL
 	inputSchema := map[string]any{
 		"type": "object",
 		"properties": map[string]any{

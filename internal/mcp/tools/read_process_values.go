@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/chewcw/aveva-historian-mcpserver/internal/dataserver"
 	"github.com/chewcw/aveva-historian-mcpserver/internal/historian"
 	"github.com/chewcw/aveva-historian-mcpserver/internal/historian/endpoints"
 	"github.com/chewcw/aveva-historian-mcpserver/internal/types"
@@ -13,7 +14,8 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-func RegisterReadProcessValues(server *mcp.Server, client *historian.Client, logger *slog.Logger, byteLimit int) {
+func RegisterReadProcessValues(server *mcp.Server, client *historian.Client, store *dataserver.Store, baseURL string, logger *slog.Logger, byteLimit int) {
+	_ = store; _ = baseURL
 	logger = logger.With("tool", "read_process_values")
 	inputSchema := map[string]any{
 		"type": "object",
