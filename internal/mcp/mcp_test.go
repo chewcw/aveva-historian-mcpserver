@@ -14,7 +14,7 @@ func TestNewServerCreatesWithThreeTools(t *testing.T) {
 		ServerName: "test-server",
 	}
 	client := historian.New(cfg.BaseURL, "u", "p", "/Historian/v2", nil)
-	srv := NewServer(cfg, client, nil)
+	srv := NewServer(cfg, client, nil, nil)
 
 	if srv == nil {
 		t.Fatal("NewServer returned nil")
