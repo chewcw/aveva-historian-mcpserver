@@ -18,7 +18,7 @@ func RegisterReadProcessValues(server *mcp.Server, client *historian.Client, sto
 	inputSchema := map[string]any{
 		"type": "object",
 		"properties": map[string]any{
-			"fqn":          map[string]any{"type": "string", "description": "Tag FQN"},
+			"fqn":             map[string]any{"type": "string", "description": "Tag FQN"},
 			"start_date_time": map[string]any{"type": "string", "description": "Start date time"},
 			"end_date_time":   map[string]any{"type": "string", "description": "End date time"},
 			"retrieval_mode": map[string]any{

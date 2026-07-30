@@ -141,5 +141,3 @@ func TestGetProcessValuesBadJSON(t *testing.T) {
 		t.Errorf("error = %q, want substring %q", err.Error(), "decode")
 	}
 }
-
-

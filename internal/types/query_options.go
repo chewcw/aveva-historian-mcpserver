@@ -21,10 +21,10 @@ type OrderByClause struct {
 // Pointer fields: nil = omit the parameter from the request.
 // Slice fields: nil or empty = omit.
 type QueryOptions struct {
-	Select  []string         // $select — field names, e.g. []string{"FQN","DateTime","Value"}
-	Top     *int             // $top — nil = omit
-	Skip    *int             // $skip — nil = omit
-	OrderBy []OrderByClause  // $orderby — nil or empty = omit
-	Count   *bool            // $count — nil = omit
-	Search  *string          // $search — nil = omit
+	Select  []string        // $select — field names, e.g. []string{"FQN","DateTime","Value"}
+	Top     *int            // $top — nil = omit
+	Skip    *int            // $skip — nil = omit
+	OrderBy []OrderByClause // $orderby — nil or empty = omit
+	Count   *bool           // $count — nil = omit
+	Search  *string         // $search — nil = omit
 }

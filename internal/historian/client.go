@@ -14,10 +14,10 @@ import (
 )
 
 type Client struct {
-	baseURL        string
-	apiPathPrefix  string
-	httpClient     *http.Client
-	logger         *slog.Logger
+	baseURL       string
+	apiPathPrefix string
+	httpClient    *http.Client
+	logger        *slog.Logger
 }
 
 func New(baseURL, username, password, apiPathPrefix string, logger *slog.Logger) *Client {
