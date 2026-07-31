@@ -60,3 +60,49 @@ type AnalogSummaryValue struct {
 	Integral      *float64 `json:"Integral,omitempty"`
 	Count         *int     `json:"Count,omitempty"`
 }
+
+// Event represents an event or alarm record from the Historian Events endpoint.
+type Event struct {
+	ID                       string `json:"id"`
+	EventTime                string `json:"eventtime"`
+	Type                     string `json:"type"`
+	ReceivedTime             string `json:"receivedtime"`
+	SourceName               string `json:"source_name"`
+	Namespace                string `json:"namespace"`
+	IsAlarm                  *bool  `json:"isalarm,omitempty"`
+	Priority                 *int   `json:"priority,omitempty"`
+	Severity                 *int   `json:"severity,omitempty"`
+	Comment                  string `json:"comment,omitempty"`
+	EventTimeUTCOffsetMins   *int   `json:"eventtimeutcoffsetmins,omitempty"`
+	ValueString              string `json:"valuestring,omitempty"`
+	PreviousValueString      string `json:"previousvaluestring,omitempty"`
+	InTouchType              string `json:"intouchtype,omitempty"`
+	AlarmID                  string `json:"alarm_id,omitempty"`
+	AlarmClass               string `json:"alarm_class,omitempty"`
+	AlarmType                string `json:"alarm_type,omitempty"`
+	AlarmCondition           string `json:"alarm_condition,omitempty"`
+	AlarmState               string `json:"alarm_state,omitempty"`
+	AlarmInAlarm             *bool  `json:"alarm_inalarm,omitempty"`
+	AlarmAcknowledged        *bool  `json:"alarm_acknowledged,omitempty"`
+	AlarmIsSilenced          *bool  `json:"alarm_issilenced,omitempty"`
+	AlarmIsShelved           *bool  `json:"alarm_isshelved,omitempty"`
+	AlarmDurationMs          *int   `json:"alarm_durationms,omitempty"`
+	AlarmLimitString         string `json:"alarm_limitstring,omitempty"`
+	AlarmOriginationTime     string `json:"alarm_originationtime,omitempty"`
+	AlarmValueString         string `json:"alarm_valuestring,omitempty"`
+	AlarmUnackDuration       *int   `json:"alarm_unackdurationms,omitempty"`
+	AlarmShelveStartTimeUTC  string `json:"alarm_shelvestarttimeutc,omitempty"`
+	AlarmShelveEndTimeUTC    string `json:"alarm_shelveendtimeutc,omitempty"`
+	AlarmShelveReason        string `json:"alarm_shelvereason,omitempty"`
+	AlarmShelveUserLogin     string `json:"alarm_shelveuserlogin,omitempty"`
+	ProviderNodeName         string `json:"provider_nodename,omitempty"`
+	ProviderSystem           string `json:"provider_system,omitempty"`
+	ProviderApplicationName  string `json:"provider_applicationname,omitempty"`
+	ProviderSystemVersion    string `json:"provider_systemversion,omitempty"`
+	SourceProcessVariable    string `json:"source_processvariable,omitempty"`
+	SourceConditionVariable  string `json:"source_conditionvariable,omitempty"`
+	SourceObject             string `json:"source_object,omitempty"`
+	SourceHierarchicalObject string `json:"source_hierarchicalobject,omitempty"`
+	SourceArea               string `json:"source_area,omitempty"`
+	SourceHierarchicalArea   string `json:"source_hierarchicalarea,omitempty"`
+}
