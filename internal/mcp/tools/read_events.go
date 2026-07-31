@@ -216,14 +216,3 @@ func RegisterReadEvents(server *mcp.Server, client *historian.Client, store *dat
 		}, resourceURI, "events", result.Count), nil
 	})
 }
-
-// boolPtrStr formats a *bool as "true"/"false"/"" for nil.
-func boolPtrStr(b *bool) string {
-	if b == nil {
-		return ""
-	}
-	if *b {
-		return "true"
-	}
-	return "false"
-}

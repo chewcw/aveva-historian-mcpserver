@@ -203,6 +203,17 @@ func strPtrStr(p *string) string {
 	return *p
 }
 
+// boolPtrStr formats a *bool as "true"/"false"/"" for nil.
+func boolPtrStr(b *bool) string {
+	if b == nil {
+		return ""
+	}
+	if *b {
+		return "true"
+	}
+	return "false"
+}
+
 // getStringSliceArg returns []string from a JSON array arg, or nil if missing or not an array.
 func getStringSliceArg(args map[string]any, name string) []string {
 	if args == nil {
