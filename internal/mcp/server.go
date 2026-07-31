@@ -11,7 +11,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// NewServer creates an MCP server with the three historian tools registered.
+// NewServer creates an MCP server with the four historian tools registered.
 func NewServer(cfg *config.Config, client *historian.Client, store *dataserver.Store, logger *slog.Logger) *mcp.Server {
 	if logger == nil {
 		logger = slog.Default()
@@ -23,5 +23,6 @@ func NewServer(cfg *config.Config, client *historian.Client, store *dataserver.S
 	tools.RegisterGetTags(server, client, store, dataServerBaseURL, logger, limit)
 	tools.RegisterReadProcessValues(server, client, store, dataServerBaseURL, logger, limit)
 	tools.RegisterReadAnalogSummary(server, client, store, dataServerBaseURL, logger, limit)
+	tools.RegisterReadEvents(server, client, store, dataServerBaseURL, logger, limit)
 	return server
 }
