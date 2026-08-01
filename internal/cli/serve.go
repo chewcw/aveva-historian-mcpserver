@@ -58,11 +58,10 @@ func runServe(ctx context.Context, opts serveOptions) error {
 		return fmt.Errorf("invalid transport %q (want stdio or http)", transport)
 	}
 
-	cfg, err := config.Load(".env")
+	cfg, err := loadConfig(opts)
 	if err != nil {
 		return fmt.Errorf("config: %w", err)
 	}
-	applyFlagOverrides(cfg, opts)
 
 	logger := logging.New(cfg.LogLevel, cfg.LogFilePath)
 	client := historian.New(cfg.BaseURL, cfg.Username, cfg.Password, cfg.APIPathPrefix, logger)
@@ -87,6 +86,17 @@ func runServe(ctx context.Context, opts serveOptions) error {
 		return fmt.Errorf("server: %w", err)
 	}
 	return nil
+}
+
+// loadConfig loads env config then applies flag overrides. Env wins over
+// defaults, flags win over env, validation happens inside config.Load.
+func loadConfig(opts serveOptions) (*config.Config, error) {
+	cfg, err := config.Load(".env")
+	if err != nil {
+		return nil, err
+	}
+	applyFlagOverrides(cfg, opts)
+	return cfg, nil
 }
 
 // applyFlagOverrides overwrites cfg fields with non-zero flag values.
