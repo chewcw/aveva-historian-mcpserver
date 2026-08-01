@@ -80,3 +80,22 @@ func TestServeFlagParsing(t *testing.T) {
 		t.Fatalf("expected config error after successful flag parse, got: %v", err)
 	}
 }
+
+func TestFlagOverridesEnv(t *testing.T) {
+	t.Setenv("AVEVA_HISTORIAN_BASE_URL", "http://historian.example")
+	t.Setenv("AVEVA_HISTORIAN_USERNAME", "testuser")
+	t.Setenv("AVEVA_HISTORIAN_PASSWORD", "testpass")
+	t.Setenv("DATA_SERVER_PORT", "9999")
+	t.Setenv("DATA_SERVER_BIND", "10.0.0.1")
+
+	cfg, err := loadConfig(serveOptions{Port: 8080})
+	if err != nil {
+		t.Fatalf("loadConfig() error = %v", err)
+	}
+	if cfg.DataServerPort != 8080 {
+		t.Errorf("DataServerPort = %d, want 8080 (flag wins over env)", cfg.DataServerPort)
+	}
+	if cfg.DataServerBind != "10.0.0.1" {
+		t.Errorf("DataServerBind = %q, want 10.0.0.1 (env default preserved when flag unset)", cfg.DataServerBind)
+	}
+}
