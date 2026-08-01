@@ -56,6 +56,32 @@ The server reads configuration from environment variables. A template with all o
 | `DATA_SERVER_DEFAULT_TTL` | no | `5m` | Default resource lifetime (e.g. `5m`, `1h`) |
 | `DATA_SERVER_GC_INTERVAL` | no | `1m` | Cleanup interval for expired resources |
 
+## Command-line interface
+
+The binary ships a Cobra CLI. Bare invocation (no subcommand) runs the server — existing MCP client configs keep working unchanged.
+
+| Command | Description |
+|---|---|
+| `serve` | Run the MCP server (default when no subcommand is given) |
+| `version` | Print the build version |
+
+`serve` flags override environment variables:
+
+| Flag | Default | Description |
+|---|---|---|
+| `--transport` | `stdio` | MCP transport. Only `stdio` is implemented; `http` is reserved and exits with `http transport: not yet implemented` |
+| `--bind` | `DATA_SERVER_BIND` | Data server bind address |
+| `--port` | `DATA_SERVER_PORT` | Data server port |
+| `--log-level` | `LOG_LEVEL` | Log level (`debug`, `info`, `warn`, `error`) |
+
+Precedence: environment variables first, then flags, then validation. Credentials (`AVEVA_HISTORIAN_*`) are environment-only.
+
+`version` prints the version embedded at build time (default `dev`):
+
+```bash
+go build -ldflags "-X github.com/chewcw/aveva-historian-mcpserver/internal/cli.version=v1.2.3" -o bin/aveva-historian-mcp ./cmd/server
+```
+
 ## Usage
 
 Add the server to your MCP client configuration. For Claude Desktop (`claude_desktop_config.json`):
@@ -112,13 +138,17 @@ go vet ./...
 
 # Run (stdio)
 go run ./cmd/server
+
+# Check version
+go run ./cmd/server version
 ```
 
 ## Project structure
 
 ```
-├── cmd/server/main.go           # Entry point: configuration, wiring, serve
+├── cmd/server/main.go           # Entry point: thin wrapper around internal/cli
 ├── internal/
+│   ├── cli/                     # Cobra commands: serve, version, flag handling
 │   ├── config/                  # Environment → typed config
 │   ├── historian/               # NTLM HTTP client + OData response parsing
 │   │   └── endpoints/           # One file per API group (tags, process values, summary)
