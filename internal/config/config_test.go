@@ -20,6 +20,14 @@ func envCleanup() {
 	os.Unsetenv("DATA_SERVER_PORT")
 	os.Unsetenv("DATA_SERVER_DEFAULT_TTL")
 	os.Unsetenv("DATA_SERVER_GC_INTERVAL")
+	os.Unsetenv("MCP_HTTP_BIND")
+	os.Unsetenv("MCP_HTTP_PORT")
+	os.Unsetenv("MCP_HTTP_JWT_SECRET")
+	os.Unsetenv("MCP_HTTP_JWT_ISSUER")
+	os.Unsetenv("MCP_HTTP_JWT_AUDIENCE")
+	os.Unsetenv("MCP_CLIENTS_FILE")
+	os.Unsetenv("MCP_CORS_ORIGINS")
+	os.Unsetenv("MCP_CORS_ALLOW_CREDENTIALS")
 }
 
 func TestLoad_Success(t *testing.T) {
@@ -173,5 +181,93 @@ func TestConfigDataServerOverrides(t *testing.T) {
 	}
 	if cfg.DataServerGCInterval != 30*time.Second {
 		t.Errorf("DataServerGCInterval = %v, want 30s", cfg.DataServerGCInterval)
+	}
+}
+
+func TestConfigMCPHTTPDefaults(t *testing.T) {
+	envCleanup()
+	dir := t.TempDir()
+	env := filepath.Join(dir, ".env")
+	if err := os.WriteFile(env, []byte(
+		"AVEVA_HISTORIAN_BASE_URL=http://historian:32569\n"+
+			"AVEVA_HISTORIAN_USERNAME=admin\n"+
+			"AVEVA_HISTORIAN_PASSWORD=secret\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := Load(env)
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.MCPHTTPBind != "127.0.0.1" {
+		t.Errorf("MCPHTTPBind = %q, want %q", cfg.MCPHTTPBind, "127.0.0.1")
+	}
+	if cfg.MCPHTTPPort != 8200 {
+		t.Errorf("MCPHTTPPort = %d, want 8200", cfg.MCPHTTPPort)
+	}
+	if cfg.MCPHTTPJWTIssuer != "aveva-historian-mcp" {
+		t.Errorf("MCPHTTPJWTIssuer = %q, want %q", cfg.MCPHTTPJWTIssuer, "aveva-historian-mcp")
+	}
+	if cfg.MCPHTTPJWTAudience != "aveva-historian-mcp" {
+		t.Errorf("MCPHTTPJWTAudience = %q, want %q", cfg.MCPHTTPJWTAudience, "aveva-historian-mcp")
+	}
+	if cfg.MCPClientsFile != "./clients.json" {
+		t.Errorf("MCPClientsFile = %q, want %q", cfg.MCPClientsFile, "./clients.json")
+	}
+	if cfg.MCPCORSOrigins != "*" {
+		t.Errorf("MCPCORSOrigins = %q, want %q", cfg.MCPCORSOrigins, "*")
+	}
+	if cfg.MCPCORSAllowCreds {
+		t.Error("MCPCORSAllowCreds = true, want false")
+	}
+	if cfg.MCPHTTPJWTSecret != "" {
+		t.Errorf("MCPHTTPJWTSecret = %q, want empty", cfg.MCPHTTPJWTSecret)
+	}
+}
+
+func TestConfigMCPHTTPOverrides(t *testing.T) {
+	envCleanup()
+	dir := t.TempDir()
+	env := filepath.Join(dir, ".env")
+	if err := os.WriteFile(env, []byte(
+		"AVEVA_HISTORIAN_BASE_URL=http://historian:32569\n"+
+			"AVEVA_HISTORIAN_USERNAME=admin\n"+
+			"AVEVA_HISTORIAN_PASSWORD=secret\n"+
+			"MCP_HTTP_BIND=0.0.0.0\n"+
+			"MCP_HTTP_PORT=9999\n"+
+			"MCP_HTTP_JWT_SECRET=this-is-a-32+char-secret-1234567890\n"+
+			"MCP_HTTP_JWT_ISSUER=my-issuer\n"+
+			"MCP_HTTP_JWT_AUDIENCE=my-audience\n"+
+			"MCP_CLIENTS_FILE=/etc/mcp/clients.json\n"+
+			"MCP_CORS_ORIGINS=https://a.example.com,https://b.example.com\n"+
+			"MCP_CORS_ALLOW_CREDENTIALS=true\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := Load(env)
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.MCPHTTPBind != "0.0.0.0" {
+		t.Errorf("MCPHTTPBind = %q, want %q", cfg.MCPHTTPBind, "0.0.0.0")
+	}
+	if cfg.MCPHTTPPort != 9999 {
+		t.Errorf("MCPHTTPPort = %d, want 9999", cfg.MCPHTTPPort)
+	}
+	if cfg.MCPHTTPJWTSecret != "this-is-a-32+char-secret-1234567890" {
+		t.Errorf("MCPHTTPJWTSecret = %q, want set value", cfg.MCPHTTPJWTSecret)
+	}
+	if cfg.MCPHTTPJWTIssuer != "my-issuer" {
+		t.Errorf("MCPHTTPJWTIssuer = %q, want %q", cfg.MCPHTTPJWTIssuer, "my-issuer")
+	}
+	if cfg.MCPHTTPJWTAudience != "my-audience" {
+		t.Errorf("MCPHTTPJWTAudience = %q, want %q", cfg.MCPHTTPJWTAudience, "my-audience")
+	}
+	if cfg.MCPClientsFile != "/etc/mcp/clients.json" {
+		t.Errorf("MCPClientsFile = %q, want %q", cfg.MCPClientsFile, "/etc/mcp/clients.json")
+	}
+	if cfg.MCPCORSOrigins != "https://a.example.com,https://b.example.com" {
+		t.Errorf("MCPCORSOrigins = %q, want two origins", cfg.MCPCORSOrigins)
+	}
+	if !cfg.MCPCORSAllowCreds {
+		t.Error("MCPCORSAllowCreds = false, want true")
 	}
 }
