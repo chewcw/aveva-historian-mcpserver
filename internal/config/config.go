@@ -24,6 +24,15 @@ type Config struct {
 	DataServerPort       int           // default 8199
 	DataServerDefaultTTL time.Duration // default 5m
 	DataServerGCInterval time.Duration // default 1m
+
+	MCPHTTPBind        string // default "127.0.0.1"
+	MCPHTTPPort        int    // default 8200
+	MCPHTTPJWTSecret   string // required when http transport is used
+	MCPHTTPJWTIssuer   string // default "aveva-historian-mcp"
+	MCPHTTPJWTAudience string // default "aveva-historian-mcp"
+	MCPClientsFile     string // default "./clients.json"
+	MCPCORSOrigins     string // comma-separated, default "*"
+	MCPCORSAllowCreds  bool   // default false
 }
 
 func Load(path string) (*Config, error) {
@@ -76,6 +85,15 @@ func loadFromEnv() (*Config, error) {
 	cfg.DataServerPort = defaultInt(os.Getenv("DATA_SERVER_PORT"), 8199)
 	cfg.DataServerDefaultTTL = defaultDuration(os.Getenv("DATA_SERVER_DEFAULT_TTL"), 5*time.Minute)
 	cfg.DataServerGCInterval = defaultDuration(os.Getenv("DATA_SERVER_GC_INTERVAL"), 1*time.Minute)
+
+	cfg.MCPHTTPBind = defaultStr(os.Getenv("MCP_HTTP_BIND"), "127.0.0.1")
+	cfg.MCPHTTPPort = defaultInt(os.Getenv("MCP_HTTP_PORT"), 8200)
+	cfg.MCPHTTPJWTSecret = os.Getenv("MCP_HTTP_JWT_SECRET")
+	cfg.MCPHTTPJWTIssuer = defaultStr(os.Getenv("MCP_HTTP_JWT_ISSUER"), "aveva-historian-mcp")
+	cfg.MCPHTTPJWTAudience = defaultStr(os.Getenv("MCP_HTTP_JWT_AUDIENCE"), "aveva-historian-mcp")
+	cfg.MCPClientsFile = defaultStr(os.Getenv("MCP_CLIENTS_FILE"), "./clients.json")
+	cfg.MCPCORSOrigins = defaultStr(os.Getenv("MCP_CORS_ORIGINS"), "*")
+	cfg.MCPCORSAllowCreds = os.Getenv("MCP_CORS_ALLOW_CREDENTIALS") == "true"
 
 	var missing []string
 	if cfg.BaseURL == "" {

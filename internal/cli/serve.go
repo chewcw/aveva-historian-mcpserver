@@ -11,6 +11,7 @@ import (
 	"github.com/chewcw/aveva-historian-mcpserver/internal/historian"
 	"github.com/chewcw/aveva-historian-mcpserver/internal/logging"
 	mcpserver "github.com/chewcw/aveva-historian-mcpserver/internal/mcp"
+	mcphttp "github.com/chewcw/aveva-historian-mcpserver/internal/mcphttp"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/spf13/cobra"
@@ -22,6 +23,8 @@ type serveOptions struct {
 	Transport string
 	Bind      string
 	Port      int
+	HTTPBind  string
+	HTTPPort  int
 	LogLevel  string
 }
 
@@ -35,9 +38,11 @@ func newServeCmd() *cobra.Command {
 			return runServe(cmd.Context(), opts)
 		},
 	}
-	cmd.Flags().StringVar(&opts.Transport, "transport", "stdio", "Supported MCP transport: stdio")
+	cmd.Flags().StringVar(&opts.Transport, "transport", "stdio", "Supported MCP transport: stdio or http")
 	cmd.Flags().StringVar(&opts.Bind, "bind", "", "data server bind address (overrides DATA_SERVER_BIND)")
 	cmd.Flags().IntVar(&opts.Port, "port", 0, "data server port (overrides DATA_SERVER_PORT)")
+	cmd.Flags().StringVar(&opts.HTTPBind, "http-bind", "", "MCP HTTP bind address (overrides MCP_HTTP_BIND)")
+	cmd.Flags().IntVar(&opts.HTTPPort, "http-port", 0, "MCP HTTP port (overrides MCP_HTTP_PORT)")
 	cmd.Flags().StringVar(&opts.LogLevel, "log-level", "", "log level (overrides LOG_LEVEL)")
 	return cmd
 }
@@ -53,7 +58,6 @@ func runServe(ctx context.Context, opts serveOptions) error {
 	switch transport {
 	case "stdio":
 	case "http":
-		return fmt.Errorf("http transport: not yet implemented")
 	default:
 		return fmt.Errorf("invalid transport %q (want stdio or http)", transport)
 	}
@@ -76,12 +80,21 @@ func runServe(ctx context.Context, opts serveOptions) error {
 	}()
 	dataserver.RunGC(dataServerCtx, store, cfg.DataServerGCInterval, logger)
 
-	server := mcpserver.NewServer(cfg, client, store, logger)
-
 	ctx, cancel := signal.NotifyContext(ctx, os.Interrupt)
 	defer cancel()
 
 	logger.Info("starting server", "name", cfg.ServerName, "version", cfg.ServerVersion)
+	if transport == "http" {
+		if err := mcphttp.ValidateConfig(cfg); err != nil {
+			return err
+		}
+		server := mcpserver.NewServer(cfg, client, store, logger)
+		if err := mcphttp.Start(ctx, cfg, server, logger); err != nil {
+			return fmt.Errorf("mcp http server: %w", err)
+		}
+		return nil
+	}
+	server := mcpserver.NewServer(cfg, client, store, logger)
 	if err := server.Run(ctx, &mcp.StdioTransport{}); err != nil {
 		return fmt.Errorf("server: %w", err)
 	}
@@ -107,6 +120,12 @@ func applyFlagOverrides(cfg *config.Config, opts serveOptions) {
 	}
 	if opts.Port != 0 {
 		cfg.DataServerPort = opts.Port
+	}
+	if opts.HTTPBind != "" {
+		cfg.MCPHTTPBind = opts.HTTPBind
+	}
+	if opts.HTTPPort != 0 {
+		cfg.MCPHTTPPort = opts.HTTPPort
 	}
 	if opts.LogLevel != "" {
 		cfg.LogLevel = opts.LogLevel

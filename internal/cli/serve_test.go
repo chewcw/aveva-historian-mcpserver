@@ -7,15 +7,17 @@ import (
 	"github.com/chewcw/aveva-historian-mcpserver/internal/config"
 )
 
-func TestTransportHTTPRejected(t *testing.T) {
+func TestTransportHTTPPassesGate(t *testing.T) {
+	clearRequiredEnv(t)
 	cmd := NewRootCmd()
 	cmd.SetArgs([]string{"serve", "--transport", "http"})
 	err := cmd.Execute()
 	if err == nil {
-		t.Fatal("expected error for http transport")
+		t.Fatal("expected error: http transport should proceed to config validation")
 	}
-	if !strings.Contains(err.Error(), "not yet implemented") {
-		t.Fatalf("expected not-yet-implemented error, got: %v", err)
+	// Reaching the config error proves http passed the transport gate.
+	if !strings.Contains(err.Error(), "missing required config") {
+		t.Fatalf("expected config error, got: %v", err)
 	}
 }
 
@@ -47,7 +49,7 @@ func TestTransportStdioPassesGate(t *testing.T) {
 
 func TestApplyFlagOverrides(t *testing.T) {
 	cfg := &config.Config{DataServerPort: 9999, DataServerBind: "0.0.0.0", LogLevel: "info"}
-	applyFlagOverrides(cfg, serveOptions{Port: 8080, LogLevel: "debug"})
+	applyFlagOverrides(cfg, serveOptions{Port: 8080, LogLevel: "debug", HTTPBind: "0.0.0.0", HTTPPort: 9000})
 	if cfg.DataServerPort != 8080 {
 		t.Errorf("DataServerPort = %d, want 8080", cfg.DataServerPort)
 	}
@@ -57,12 +59,15 @@ func TestApplyFlagOverrides(t *testing.T) {
 	if cfg.DataServerBind != "0.0.0.0" {
 		t.Errorf("DataServerBind = %q, want untouched 0.0.0.0", cfg.DataServerBind)
 	}
+	if cfg.MCPHTTPBind != "0.0.0.0" || cfg.MCPHTTPPort != 9000 {
+		t.Errorf("http overrides not applied: bind=%q port=%d", cfg.MCPHTTPBind, cfg.MCPHTTPPort)
+	}
 }
 
 func TestApplyFlagOverridesZeroValuesNoop(t *testing.T) {
-	cfg := &config.Config{DataServerPort: 9999, DataServerBind: "0.0.0.0", LogLevel: "info"}
+	cfg := &config.Config{DataServerPort: 9999, DataServerBind: "0.0.0.0", LogLevel: "info", MCPHTTPBind: "127.0.0.1", MCPHTTPPort: 8200}
 	applyFlagOverrides(cfg, serveOptions{})
-	if cfg.DataServerPort != 9999 || cfg.DataServerBind != "0.0.0.0" || cfg.LogLevel != "info" {
+	if cfg.DataServerPort != 9999 || cfg.DataServerBind != "0.0.0.0" || cfg.LogLevel != "info" || cfg.MCPHTTPBind != "127.0.0.1" || cfg.MCPHTTPPort != 8200 {
 		t.Fatalf("zero-value options changed config: %+v", cfg)
 	}
 }
@@ -70,7 +75,7 @@ func TestApplyFlagOverridesZeroValuesNoop(t *testing.T) {
 func TestServeFlagParsing(t *testing.T) {
 	clearRequiredEnv(t)
 	cmd := NewRootCmd()
-	cmd.SetArgs([]string{"serve", "--bind", "0.0.0.0", "--port", "9000", "--log-level", "debug"})
+	cmd.SetArgs([]string{"serve", "--bind", "0.0.0.0", "--port", "9000", "--http-bind", "0.0.0.0", "--http-port", "9000", "--log-level", "debug"})
 	err := cmd.Execute()
 	if err == nil {
 		t.Fatal("expected error from config load with no credentials")
