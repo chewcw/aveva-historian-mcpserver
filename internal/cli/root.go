@@ -19,7 +19,7 @@ func NewRootCmd() *cobra.Command {
 			return runServe(cmd.Context(), serveOptions{})
 		},
 	}
-	root.AddCommand(newServeCmd(), newVersionCmd())
+	root.AddCommand(newServeCmd(), newVersionCmd(), NewHashCmd())
 	return root
 }
 
