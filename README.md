@@ -14,6 +14,7 @@ Full payloads never enter the chat context; clients fetch them directly from the
 ## Features
 
 - MCP stdio transport (works with Claude Desktop, Cursor, and other MCP clients)
+- MCP Streamable HTTP transport (`--transport http`) with JWT HS256 auth, OAuth2-style token endpoint, and CORS
 - NTLM authentication against AVEVA Historian REST API
 - OData queries for tags, process values, and analog summaries
 - Data server with TTL, automatic cleanup, and pin/delete resource lifecycle
@@ -55,6 +56,14 @@ The server reads configuration from environment variables. A template with all o
 | `DATA_SERVER_PORT` | no | `8199` | Data server port |
 | `DATA_SERVER_DEFAULT_TTL` | no | `5m` | Default resource lifetime (e.g. `5m`, `1h`) |
 | `DATA_SERVER_GC_INTERVAL` | no | `1m` | Cleanup interval for expired resources |
+| `MCP_HTTP_BIND` | no | `127.0.0.1` | MCP HTTP bind address |
+| `MCP_HTTP_PORT` | no | `8200` | MCP HTTP port |
+| `MCP_HTTP_JWT_SECRET` | no | — | JWT signing secret for the HTTP transport (required when using it; min 32 chars) |
+| `MCP_HTTP_JWT_ISSUER` | no | `aveva-historian-mcp` | JWT `iss` claim |
+| `MCP_HTTP_JWT_AUDIENCE` | no | `aveva-historian-mcp` | JWT `aud` claim |
+| `MCP_CLIENTS_FILE` | no | `./clients.json` | Client credentials file for the HTTP transport |
+| `MCP_CORS_ORIGINS` | no | `*` | Comma-separated allowed CORS origins |
+| `MCP_CORS_ALLOW_CREDENTIALS` | no | `false` | Allow credentialed CORS requests |
 
 ## Command-line interface
 
@@ -63,15 +72,18 @@ The binary ships a Cobra CLI. Bare invocation (no subcommand) runs the server �
 | Command | Description |
 |---|---|
 | `serve` | Run the MCP server (default when no subcommand is given) |
+| `hashsecret` | Print a bcrypt hash of a client secret for `clients.json` |
 | `version` | Print the build version |
 
 `serve` flags override environment variables:
 
 | Flag | Default | Description |
 |---|---|---|
-| `--transport` | `stdio` | MCP transport. Only `stdio` is implemented; `http` is reserved and exits with `http transport: not yet implemented` |
+| `--transport` | `stdio` | MCP transport: `stdio` or `http` |
 | `--bind` | `DATA_SERVER_BIND` | Data server bind address |
 | `--port` | `DATA_SERVER_PORT` | Data server port |
+| `--http-bind` | `MCP_HTTP_BIND` | MCP HTTP bind address |
+| `--http-port` | `MCP_HTTP_PORT` | MCP HTTP port |
 | `--log-level` | `LOG_LEVEL` | Log level (`debug`, `info`, `warn`, `error`) |
 
 Precedence: environment variables first, then flags, then validation. Credentials (`AVEVA_HISTORIAN_*`) are environment-only.
@@ -127,6 +139,81 @@ Embedded HTTP server serving resource payloads.
 
 Expired resources are removed by the background cleanup loop (`DATA_SERVER_GC_INTERVAL`).
 
+## HTTP transport
+
+For remote or browser-based clients, run MCP over a Streamable HTTP endpoint with JWT authentication instead of stdio:
+
+```bash
+./bin/aveva-historian-mcp serve --transport http
+```
+
+This starts an HTTP server (default `127.0.0.1:8200`) with two endpoints:
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `POST` | `/mcp/token` | client credentials | Mint a JWT access token (OAuth2-style client-credentials exchange) |
+| `POST`/`GET` | `/mcp` | `Authorization: Bearer <jwt>` | Streamable HTTP MCP endpoint (JSON-RPC messages + SSE streams) |
+
+### Client credentials
+
+Clients are defined in `MCP_CLIENTS_FILE` (`clients.json` by default). Secrets are stored as bcrypt hashes — never plaintext. Generate a hash with the `hashsecret` command:
+
+```bash
+./bin/aveva-historian-mcp hashsecret my-client-secret
+```
+
+Example `clients.json`:
+
+```json
+{
+  "clients": [
+    {
+      "client_id": "web",
+      "client_secret_hash": "$2a$10$...",
+      "scopes": ["read"],
+      "enabled": true
+    }
+  ]
+}
+```
+
+Only clients with `"enabled": true` can authenticate. Malformed entries (invalid bcrypt hash, duplicate `client_id`, missing file) are hard errors at startup.
+
+### Getting a token
+
+The token endpoint accepts HTTP Basic auth or form-encoded credentials and returns a JWT valid for 1 hour:
+
+```bash
+# Basic auth
+curl -u web:my-client-secret -X POST http://127.0.0.1:8200/mcp/token
+
+# Form-encoded
+curl -X POST http://127.0.0.1:8200/mcp/token \
+  -d 'client_id=web&client_secret=my-client-secret'
+```
+
+Response:
+
+```json
+{"access_token":"eyJ...","token_type":"Bearer","expires_in":3600}
+```
+
+Call the MCP endpoint with the token:
+
+```bash
+curl http://127.0.0.1:8200/mcp \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}'
+```
+
+### Configuration notes
+
+- `MCP_HTTP_JWT_SECRET` is required for the HTTP transport and must be at least 32 characters. Generate one with `openssl rand -hex 32`.
+- `MCP_CORS_ORIGINS` defaults to `*`. With `MCP_CORS_ALLOW_CREDENTIALS=true` the wildcard is rejected at startup — credentials require an explicit origin list.
+- The data server (port 8199) is unchanged; `ResourceLink` payloads work the same over HTTP.
+- `--transport http` requires `MCP_HTTP_JWT_SECRET` and a valid `clients.json`; both are validated before the listener starts.
+
 ## Development
 
 ```bash
@@ -148,12 +235,13 @@ go run ./cmd/server version
 ```
 ├── cmd/server/main.go           # Entry point: thin wrapper around internal/cli
 ├── internal/
-│   ├── cli/                     # Cobra commands: serve, version, flag handling
+│   ├── cli/                     # Cobra commands: serve, version, hashsecret, flag handling
 │   ├── config/                  # Environment → typed config
 │   ├── historian/               # NTLM HTTP client + OData response parsing
 │   │   └── endpoints/           # One file per API group (tags, process values, summary)
 │   ├── mcp/                     # MCP server setup + tool registration
 │   │   └── tools/               # One file per MCP tool handler
+│   ├── mcphttp/                 # HTTP transport: JWT auth, token endpoint, CORS, server
 │   ├── dataserver/              # Out-of-band REST server: store, HTTP, TTL/cleanup
 │   ├── logging/                 # slog setup
 │   └── types/                   # Shared types (filter, query options, resource)
