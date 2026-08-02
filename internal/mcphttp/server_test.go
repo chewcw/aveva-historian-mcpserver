@@ -44,10 +44,10 @@ func TestValidateConfigOK(t *testing.T) {
 
 func TestStartRejectsBadClientsFile(t *testing.T) {
 	cfg := &config.Config{
-		MCPHTTPJWTSecret: testSecret,
-		MCPHTTPJWTIssuer: testIssuer,
+		MCPHTTPJWTSecret:   testSecret,
+		MCPHTTPJWTIssuer:   testIssuer,
 		MCPHTTPJWTAudience: testAudience,
-		MCPClientsFile:   filepath.Join(t.TempDir(), "missing.json"),
+		MCPClientsFile:     filepath.Join(t.TempDir(), "missing.json"),
 	}
 	srv := sdkmcp.NewServer(&sdkmcp.Implementation{Name: "test"}, nil)
 	ctx, cancel := context.WithCancel(context.Background())

@@ -38,7 +38,7 @@ func newServeCmd() *cobra.Command {
 			return runServe(cmd.Context(), opts)
 		},
 	}
-	cmd.Flags().StringVar(&opts.Transport, "transport", "stdio", "Supported MCP transport: stdio")
+	cmd.Flags().StringVar(&opts.Transport, "transport", "stdio", "Supported MCP transport: stdio or http")
 	cmd.Flags().StringVar(&opts.Bind, "bind", "", "data server bind address (overrides DATA_SERVER_BIND)")
 	cmd.Flags().IntVar(&opts.Port, "port", 0, "data server port (overrides DATA_SERVER_PORT)")
 	cmd.Flags().StringVar(&opts.HTTPBind, "http-bind", "", "MCP HTTP bind address (overrides MCP_HTTP_BIND)")

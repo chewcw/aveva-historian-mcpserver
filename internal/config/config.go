@@ -25,14 +25,14 @@ type Config struct {
 	DataServerDefaultTTL time.Duration // default 5m
 	DataServerGCInterval time.Duration // default 1m
 
-	MCPHTTPBind          string // default "127.0.0.1"
-	MCPHTTPPort          int    // default 8200
-	MCPHTTPJWTSecret     string // required when http transport is used
-	MCPHTTPJWTIssuer     string // default "aveva-historian-mcp"
-	MCPHTTPJWTAudience   string // default "aveva-historian-mcp"
-	MCPClientsFile       string // default "./clients.json"
-	MCPCORSOrigins       string // comma-separated, default "*"
-	MCPCORSAllowCreds    bool   // default false
+	MCPHTTPBind        string // default "127.0.0.1"
+	MCPHTTPPort        int    // default 8200
+	MCPHTTPJWTSecret   string // required when http transport is used
+	MCPHTTPJWTIssuer   string // default "aveva-historian-mcp"
+	MCPHTTPJWTAudience string // default "aveva-historian-mcp"
+	MCPClientsFile     string // default "./clients.json"
+	MCPCORSOrigins     string // comma-separated, default "*"
+	MCPCORSAllowCreds  bool   // default false
 }
 
 func Load(path string) (*Config, error) {
