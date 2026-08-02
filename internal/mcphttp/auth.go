@@ -71,12 +71,13 @@ func validateToken(tokenStr, secret, issuer, audience string) (*Claims, error) {
 // parsed claims via the request context.
 func requireAuth(issuer, audience, secret string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		raw, found := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
-		if !found || raw == "" {
+		// Auth schemes are case-insensitive per RFC 7235; match "bearer" too.
+		parts := strings.Fields(r.Header.Get("Authorization"))
+		if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
 			writeUnauthorized(w)
 			return
 		}
-		claims, err := validateToken(raw, secret, issuer, audience)
+		claims, err := validateToken(parts[1], secret, issuer, audience)
 		if err != nil {
 			writeUnauthorized(w)
 			return

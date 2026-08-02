@@ -36,9 +36,23 @@ func TestValidateConfigSecretTooShort(t *testing.T) {
 }
 
 func TestValidateConfigOK(t *testing.T) {
-	cfg := &config.Config{MCPHTTPJWTSecret: testSecret}
+	cfg := &config.Config{MCPHTTPJWTSecret: testSecret, MCPClientsFile: writeValidClientsFile(t)}
 	if err := ValidateConfig(cfg); err != nil {
 		t.Fatalf("ValidateConfig() error = %v", err)
+	}
+}
+
+func TestValidateConfigRejectsWildcardWithCredentials(t *testing.T) {
+	cfg := &config.Config{MCPHTTPJWTSecret: testSecret, MCPClientsFile: writeValidClientsFile(t), MCPCORSOrigins: "*", MCPCORSAllowCreds: true}
+	if err := ValidateConfig(cfg); err == nil {
+		t.Fatal("expected error for wildcard origin with credentials enabled")
+	}
+}
+
+func TestValidateConfigRejectsMissingClientsFile(t *testing.T) {
+	cfg := &config.Config{MCPHTTPJWTSecret: testSecret, MCPClientsFile: filepath.Join(t.TempDir(), "nope.json")}
+	if err := ValidateConfig(cfg); err == nil {
+		t.Fatal("expected error for missing clients file")
 	}
 }
 

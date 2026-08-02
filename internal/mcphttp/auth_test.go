@@ -108,6 +108,24 @@ func TestRequireAuthAcceptsValidToken(t *testing.T) {
 	}
 }
 
+func TestRequireAuthAcceptsLowercaseBearer(t *testing.T) {
+	c := testClient()
+	token, err := IssueToken(c, testSecret, testIssuer, testAudience, time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := requireAuth(testIssuer, testAudience, testSecret, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{}`))
+	req.Header.Set("Authorization", "bearer "+token)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (auth scheme is case-insensitive per RFC 7235)", rec.Code)
+	}
+}
+
 func TestRequireAuthRejectsMissingToken(t *testing.T) {
 	handler := requireAuth(testIssuer, testAudience, testSecret, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)

@@ -6,7 +6,9 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/chewcw/aveva-historian-mcpserver/internal/config"
@@ -21,6 +23,16 @@ const minJWTSecretLen = 32
 func ValidateConfig(cfg *config.Config) error {
 	if len(cfg.MCPHTTPJWTSecret) < minJWTSecretLen {
 		return fmt.Errorf("MCP_HTTP_JWT_SECRET must be at least %d chars for http transport", minJWTSecretLen)
+	}
+	// Browsers reject a wildcard Allow-Origin paired with credentials; it also
+	// defeats the origin allowlist. Refuse the combination at config time.
+	if cfg.MCPCORSAllowCreds && strings.TrimSpace(cfg.MCPCORSOrigins) == "*" {
+		return fmt.Errorf("MCP_CORS_ALLOW_CREDENTIALS cannot be true when MCP_CORS_ORIGINS is \"*\"")
+	}
+	// Fail fast: a missing clients file would only surface after the listener
+	// is up. Check existence here so the operator sees the error at startup.
+	if _, err := os.Stat(cfg.MCPClientsFile); err != nil {
+		return fmt.Errorf("MCP_CLIENTS_FILE %s: %w", cfg.MCPClientsFile, err)
 	}
 	return nil
 }
