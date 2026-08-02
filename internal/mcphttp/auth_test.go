@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 const (
@@ -14,8 +16,16 @@ const (
 	testAudience = "test-audience"
 )
 
+var testClientHash = func() string {
+	h, err := bcrypt.GenerateFromPassword([]byte("s3cret"), bcrypt.MinCost)
+	if err != nil {
+		panic(err)
+	}
+	return string(h)
+}()
+
 func testClient() Client {
-	return Client{ClientID: "web", Scopes: []string{"read"}, Enabled: true}
+	return Client{ClientID: "web", ClientSecretHash: testClientHash, Scopes: []string{"read"}, Enabled: true}
 }
 
 func TestIssueAndValidateToken(t *testing.T) {
