@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sort"
 	"strings"
 	"time"
 
@@ -50,7 +51,7 @@ func handleAlarmReview(client *historian.Client, store *dataserver.Store, dataSe
 			conds = append(conds, types.FilterCondition{Field: "Namespace", Operator: "eq", Value: ns})
 		}
 		if ack := boolArg(args, "acknowledged", nil); ack != nil {
-			conds = append(conds, types.FilterCondition{Field: "AlarmAcknowledged", Operator: "eq", Value: *ack})
+			conds = append(conds, types.FilterCondition{Field: "Alarm_Acknowledged", Operator: "eq", Value: *ack})
 		}
 		result, err := endpoints.GetEvents(ctx, client, []types.FilterGroupDef{{And: conds}}, types.QueryOptions{})
 		if err != nil {
@@ -81,15 +82,24 @@ func handleAlarmReview(client *historian.Client, store *dataserver.Store, dataSe
 
 		var b strings.Builder
 		fmt.Fprintf(&b, "## Alarm Review\n\n")
-		fmt.Fprintf(&b, "Window: %s .. %s %s\n\n", start, end, windowNote)
+		if windowNote != "" {
+			fmt.Fprintf(&b, "Window: %s .. %s %s\n\n", start, end, windowNote)
+		} else {
+			fmt.Fprintf(&b, "Window: %s .. %s\n\n", start, end)
+		}
 		b.WriteString("### By severity\n| Severity | Count |\n|----------|-------|\n")
 		sevNames := map[int]string{1: "1 Critical", 2: "2 Major", 3: "3 Minor", 4: "4 Informational"}
 		for s := 1; s <= 4; s++ {
 			fmt.Fprintf(&b, "| %s | %d |\n", sevNames[s], sevCounts[s])
 		}
 		b.WriteString("\n### By type\n| Type | Count |\n|------|-------|\n")
-		for typ, n := range typeCounts {
-			fmt.Fprintf(&b, "| %s | %d |\n", typ, n)
+		sortedTypes := make([]string, 0, len(typeCounts))
+		for typ := range typeCounts {
+			sortedTypes = append(sortedTypes, typ)
+		}
+		sort.Strings(sortedTypes)
+		for _, typ := range sortedTypes {
+			fmt.Fprintf(&b, "| %s | %d |\n", typ, typeCounts[typ])
 		}
 		b.WriteString("\n### Unacknowledged\n| Severity | EventTime | Source | Condition |\n|----------|-----------|--------|-----------|\n")
 		for _, ev := range capRows(unacked, 100) {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sort"
 	"strings"
 	"time"
 
@@ -104,8 +105,13 @@ func handleDailyOpsSummary(client *historian.Client, store *dataserver.Store, da
 				}
 			}
 			b.WriteString("By type:\n")
-			for typ, n := range typeCounts {
-				fmt.Fprintf(&b, "- %s: %d\n", typ, n)
+			sortedTypes := make([]string, 0, len(typeCounts))
+			for typ := range typeCounts {
+				sortedTypes = append(sortedTypes, typ)
+			}
+			sort.Strings(sortedTypes)
+			for _, typ := range sortedTypes {
+				fmt.Fprintf(&b, "- %s: %d\n", typ, typeCounts[typ])
 			}
 			b.WriteString("By severity:\n")
 			for s := 1; s <= 4; s++ {
@@ -130,24 +136,27 @@ func handleDailyOpsSummary(client *historian.Client, store *dataserver.Store, da
 			}
 		}
 
-		evRows := make([][]string, 0, len(events))
-		for _, ev := range events {
-			evRows = append(evRows, []string{ev.ID, ev.EventTime, ev.Type,
-				fmtInt(ev.Severity), ev.SourceName, ev.Namespace})
-		}
-		evRef, err := pushRef(store, dataServerBaseURL, "DailyOpsEvents: "+date, "events",
-			[]dataserver.Field{
-				{Name: "ID", Type: "string"},
-				{Name: "EventTime", Type: "datetime"},
-				{Name: "Type", Type: "string"},
-				{Name: "Severity", Type: "number"},
-				{Name: "SourceName", Type: "string"},
-				{Name: "Namespace", Type: "string"},
-			},
-			evRows)
-		if err != nil {
-			logger.Warn("failed to push events to data server", "error", err)
-			evRef = resourceRef{}
+		var evRef resourceRef
+		if len(events) > 0 {
+			evRows := make([][]string, 0, len(events))
+			for _, ev := range events {
+				evRows = append(evRows, []string{ev.ID, ev.EventTime, ev.Type,
+					fmtInt(ev.Severity), ev.SourceName, ev.Namespace})
+			}
+			evRef, err = pushRef(store, dataServerBaseURL, "DailyOpsEvents: "+date, "events",
+				[]dataserver.Field{
+					{Name: "ID", Type: "string"},
+					{Name: "EventTime", Type: "datetime"},
+					{Name: "Type", Type: "string"},
+					{Name: "Severity", Type: "number"},
+					{Name: "SourceName", Type: "string"},
+					{Name: "Namespace", Type: "string"},
+				},
+				evRows)
+			if err != nil {
+				logger.Warn("failed to push events to data server", "error", err)
+				evRef = resourceRef{}
+			}
 		}
 
 		var sumRef resourceRef

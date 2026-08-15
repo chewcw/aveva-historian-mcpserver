@@ -123,3 +123,58 @@ func TestAlarmReviewNoAlarms(t *testing.T) {
 		t.Errorf("unexpected message: %#v", res.Messages[0].Content)
 	}
 }
+
+func TestAlarmReviewFiltersReachQuery(t *testing.T) {
+	var rawQuery string
+	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		rawQuery = r.URL.RawQuery
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"value":[{"id":"a1","eventtime":"2024-01-01T12:00:00Z","type":"Alarm.Set","severity":2,"isalarm":true,"alarm_acknowledged":false}]}`))
+	}))
+	defer mock.Close()
+
+	client := historian.New(mock.URL, "", "", "", nil)
+	handler := handleAlarmReview(client, nil, "", discardLogger(), 1_048_576)
+	if _, err := handler(context.Background(), &mcp.GetPromptRequest{
+		Params: &mcp.GetPromptParams{Arguments: map[string]string{
+			"start_date_time": "2024-01-01T00:00:00Z",
+			"end_date_time":   "2024-01-02T00:00:00Z",
+			"severity":        "2",
+			"namespace":       "Area1",
+			"acknowledged":    "false",
+		}},
+	}); err != nil {
+		t.Fatalf("handler: %v", err)
+	}
+	for _, want := range []string{"Severity", "Namespace", "Alarm_Acknowledged"} {
+		if !strings.Contains(rawQuery, want) {
+			t.Errorf("query missing %s: %s", want, rawQuery)
+		}
+	}
+}
+
+func TestAlarmReviewFiltersAbsentWhenNotGiven(t *testing.T) {
+	var rawQuery string
+	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		rawQuery = r.URL.RawQuery
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"value":[{"id":"a1","eventtime":"2024-01-01T12:00:00Z","type":"Alarm.Set","severity":2,"isalarm":true,"alarm_acknowledged":false}]}`))
+	}))
+	defer mock.Close()
+
+	client := historian.New(mock.URL, "", "", "", nil)
+	handler := handleAlarmReview(client, nil, "", discardLogger(), 1_048_576)
+	if _, err := handler(context.Background(), &mcp.GetPromptRequest{
+		Params: &mcp.GetPromptParams{Arguments: map[string]string{
+			"start_date_time": "2024-01-01T00:00:00Z",
+			"end_date_time":   "2024-01-02T00:00:00Z",
+		}},
+	}); err != nil {
+		t.Fatalf("handler: %v", err)
+	}
+	for _, absent := range []string{"Severity", "Namespace", "Alarm_Acknowledged"} {
+		if strings.Contains(rawQuery, absent) {
+			t.Errorf("query must not contain %s: %s", absent, rawQuery)
+		}
+	}
+}

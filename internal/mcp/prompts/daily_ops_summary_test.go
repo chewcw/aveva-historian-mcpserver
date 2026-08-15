@@ -126,3 +126,55 @@ func TestDailyOpsSummaryBadDate(t *testing.T) {
 		t.Errorf("unexpected message: %#v", res.Messages[0].Content)
 	}
 }
+
+func TestDailyOpsSummaryFiltersReachQuery(t *testing.T) {
+	var rawQuery string
+	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		rawQuery = r.URL.RawQuery
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"value":[{"id":"e1","eventtime":"2024-01-01T10:00:00Z","type":"Alarm.Set","severity":1,"isalarm":true,"source_name":"P-101A","namespace":"Area1"}]}`))
+	}))
+	defer mock.Close()
+
+	client := historian.New(mock.URL, "", "", "", nil)
+	handler := handleDailyOpsSummary(client, nil, "", discardLogger(), 1_048_576)
+	if _, err := handler(context.Background(), &mcp.GetPromptRequest{
+		Params: &mcp.GetPromptParams{Arguments: map[string]string{
+			"date":      "2024-01-01",
+			"severity":  "1",
+			"namespace": "Area1",
+		}},
+	}); err != nil {
+		t.Fatalf("handler: %v", err)
+	}
+	for _, want := range []string{"Severity", "Namespace"} {
+		if !strings.Contains(rawQuery, want) {
+			t.Errorf("query missing %s: %s", want, rawQuery)
+		}
+	}
+}
+
+func TestDailyOpsSummaryNoEventsSingleMessage(t *testing.T) {
+	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"value":[]}`))
+	}))
+	defer mock.Close()
+
+	client := historian.New(mock.URL, "", "", "", nil)
+	store := dataserver.NewStore(time.Minute) // real store; empty events must not produce a link
+	handler := handleDailyOpsSummary(client, store, "http://localhost:8199", discardLogger(), 1_048_576)
+	res, err := handler(context.Background(), &mcp.GetPromptRequest{
+		Params: &mcp.GetPromptParams{Arguments: map[string]string{"date": "2024-01-01"}},
+	})
+	if err != nil {
+		t.Fatalf("handler: %v", err)
+	}
+	if len(res.Messages) != 1 { // preview only — empty events push is skipped, resultMessage drops empty refs
+		t.Fatalf("want 1 message, got %d", len(res.Messages))
+	}
+	tc, ok := res.Messages[0].Content.(*mcp.TextContent)
+	if !ok || !strings.Contains(tc.Text, "No events in the given period") {
+		t.Errorf("unexpected message: %#v", res.Messages[0].Content)
+	}
+}
