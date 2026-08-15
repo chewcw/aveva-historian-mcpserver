@@ -2,10 +2,12 @@ package prompts
 
 import (
 	"fmt"
+	"log/slog"
 	"strconv"
 	"strings"
 
 	"github.com/chewcw/aveva-historian-mcpserver/internal/dataserver"
+	"github.com/chewcw/aveva-historian-mcpserver/internal/historian"
 	"github.com/chewcw/aveva-historian-mcpserver/internal/mcp/tools"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -143,6 +145,16 @@ func fmtStr(p *string) string {
 		return ""
 	}
 	return *p
+}
+
+// RegisterPrompts registers all five historian prompts on the server.
+func RegisterPrompts(server *mcp.Server, client *historian.Client, store *dataserver.Store, dataServerBaseURL string, logger *slog.Logger, byteLimit int) {
+	logger = logger.With("feature", "prompts")
+	RegisterCurrentStatus(server, client, store, dataServerBaseURL, logger, byteLimit)
+	RegisterTagProfiler(server, client, store, dataServerBaseURL, logger, byteLimit)
+	RegisterTagExplorer(server, client, store, dataServerBaseURL, logger, byteLimit)
+	RegisterTrendReport(server, client, store, dataServerBaseURL, logger, byteLimit)
+	RegisterCompareTags(server, client, store, dataServerBaseURL, logger, byteLimit)
 }
 
 // isValidRetrievalMode reports whether mode is a supported process-values mode.
