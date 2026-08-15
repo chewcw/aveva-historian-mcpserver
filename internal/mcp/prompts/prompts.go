@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/chewcw/aveva-historian-mcpserver/internal/dataserver"
 	"github.com/chewcw/aveva-historian-mcpserver/internal/historian"
@@ -166,4 +167,95 @@ func isValidRetrievalMode(mode string) bool {
 	default:
 		return false
 	}
+}
+
+const (
+	// timeLayout is the UTC timestamp layout used for prompt time windows.
+	timeLayout = "2006-01-02T15:04:05Z"
+	// dayLayout is the YYYY-MM-DD date layout accepted by daily_ops_summary.
+	dayLayout = "2006-01-02"
+)
+
+// resolveAlarmWindow returns the event window for alarm_review. Missing
+// start_date_time defaults to now-24h and missing end_date_time to now; note
+// carries "(default)" flags for whichever defaults were applied.
+func resolveAlarmWindow(args map[string]string, now time.Time) (start, end, note string) {
+	start = strings.TrimSpace(args["start_date_time"])
+	end = strings.TrimSpace(args["end_date_time"])
+	var flags []string
+	if start == "" {
+		start = now.Add(-24 * time.Hour).UTC().Format(timeLayout)
+		flags = append(flags, "last 24h")
+	}
+	if end == "" {
+		end = now.UTC().Format(timeLayout)
+		flags = append(flags, "now")
+	}
+	if len(flags) > 0 {
+		note = "(" + strings.Join(flags, ", ") + ", default)"
+	}
+	return start, end, note
+}
+
+// resolveDayWindow returns the day boundaries for daily_ops_summary. A missing
+// date defaults to today (UTC); date must parse as YYYY-MM-DD. note carries
+// "(today, default)" when the default was used.
+func resolveDayWindow(args map[string]string, now time.Time) (start, end, date, note string, err error) {
+	date = strings.TrimSpace(args["date"])
+	if date == "" {
+		date = now.UTC().Format(dayLayout)
+		note = "(today, default)"
+	} else if _, err := time.Parse(dayLayout, date); err != nil {
+		return "", "", "", "", fmt.Errorf("date must be YYYY-MM-DD")
+	}
+	start = date + "T00:00:00Z"
+	end = date + "T23:59:59Z"
+	return start, end, date, note, nil
+}
+
+// boolArg returns the *bool value of an argument, or def when the argument is
+// missing or not "true"/"false".
+func boolArg(args map[string]string, name string, def *bool) *bool {
+	if args == nil {
+		return def
+	}
+	v, ok := args[name]
+	if !ok {
+		return def
+	}
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "true":
+		b := true
+		return &b
+	case "false":
+		b := false
+		return &b
+	}
+	return def
+}
+
+// severityArg parses the severity argument, validating 1-4 (1=Critical,
+// 2=Major, 3=Minor, 4=Informational). Returns (0, nil) when absent (no
+// filter) and an error only when present but out of range.
+func severityArg(args map[string]string) (int, error) {
+	raw := strings.TrimSpace(args["severity"])
+	if raw == "" {
+		return 0, nil
+	}
+	n, err := strconv.Atoi(raw)
+	if err != nil || n < 1 || n > 4 {
+		return 0, fmt.Errorf("severity must be 1-4 (1=Critical, 2=Major, 3=Minor, 4=Informational)")
+	}
+	return n, nil
+}
+
+// boolStr formats a *bool as "true"/"false", or "" when nil.
+func boolStr(p *bool) string {
+	if p == nil {
+		return ""
+	}
+	if *p {
+		return "true"
+	}
+	return "false"
 }

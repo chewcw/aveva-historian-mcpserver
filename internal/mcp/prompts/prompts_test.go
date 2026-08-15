@@ -3,7 +3,9 @@ package prompts
 import (
 	"io"
 	"log/slog"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -147,5 +149,103 @@ func TestIsValidRetrievalMode(t *testing.T) {
 	}
 	if isValidRetrievalMode("Bogus") {
 		t.Error("invalid mode accepted")
+	}
+}
+
+func TestResolveAlarmWindow(t *testing.T) {
+	now := time.Date(2026, 8, 15, 12, 0, 0, 0, time.UTC)
+	t.Run("both defaults", func(t *testing.T) {
+		start, end, note := resolveAlarmWindow(nil, now)
+		if start != "2026-08-14T12:00:00Z" {
+			t.Errorf("start = %q, want 2026-08-14T12:00:00Z", start)
+		}
+		if end != "2026-08-15T12:00:00Z" {
+			t.Errorf("end = %q, want 2026-08-15T12:00:00Z", end)
+		}
+		if note != "(last 24h, now, default)" {
+			t.Errorf("note = %q, want (last 24h, now, default)", note)
+		}
+	})
+	t.Run("explicit values no note", func(t *testing.T) {
+		args := map[string]string{
+			"start_date_time": "2026-08-01T00:00:00Z",
+			"end_date_time":   "2026-08-02T00:00:00Z",
+		}
+		start, end, note := resolveAlarmWindow(args, now)
+		if start != "2026-08-01T00:00:00Z" || end != "2026-08-02T00:00:00Z" || note != "" {
+			t.Errorf("got (%q, %q, %q), want explicit values and empty note", start, end, note)
+		}
+	})
+}
+
+func TestResolveDayWindow(t *testing.T) {
+	now := time.Date(2026, 8, 15, 12, 0, 0, 0, time.UTC)
+	t.Run("explicit date", func(t *testing.T) {
+		start, end, date, note, err := resolveDayWindow(map[string]string{"date": "2026-08-01"}, now)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if start != "2026-08-01T00:00:00Z" || end != "2026-08-01T23:59:59Z" || date != "2026-08-01" || note != "" {
+			t.Errorf("got (%q, %q, %q, %q), want day boundaries with empty note", start, end, date, note)
+		}
+	})
+	t.Run("today default", func(t *testing.T) {
+		start, end, date, note, err := resolveDayWindow(nil, now)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if date != "2026-08-15" || note != "(today, default)" {
+			t.Errorf("date = %q note = %q, want today + (today, default)", date, note)
+		}
+		if start != "2026-08-15T00:00:00Z" || end != "2026-08-15T23:59:59Z" {
+			t.Errorf("bounds = (%q, %q)", start, end)
+		}
+	})
+	t.Run("bad date", func(t *testing.T) {
+		_, _, _, _, err := resolveDayWindow(map[string]string{"date": "15/08/2026"}, now)
+		if err == nil || !strings.Contains(err.Error(), "date must be YYYY-MM-DD") {
+			t.Errorf("want date format error, got %v", err)
+		}
+	})
+}
+
+func TestBoolArg(t *testing.T) {
+	args := map[string]string{"ack": "true", "no": "false", "junk": "yes"}
+	if got := boolArg(args, "ack", nil); got == nil || !*got {
+		t.Errorf("boolArg(ack) = %v, want true", got)
+	}
+	if got := boolArg(args, "no", nil); got == nil || *got {
+		t.Errorf("boolArg(no) = %v, want false", got)
+	}
+	if got := boolArg(args, "junk", nil); got != nil {
+		t.Errorf("boolArg(junk) = %v, want nil", got)
+	}
+	if got := boolArg(args, "missing", nil); got != nil {
+		t.Errorf("boolArg(missing) = %v, want nil", got)
+	}
+}
+
+func TestSeverityArg(t *testing.T) {
+	if n, err := severityArg(nil); n != 0 || err != nil {
+		t.Errorf("absent: (%d, %v), want (0, nil)", n, err)
+	}
+	if n, err := severityArg(map[string]string{"severity": "1"}); n != 1 || err != nil {
+		t.Errorf("severity 1: (%d, %v)", n, err)
+	}
+	if _, err := severityArg(map[string]string{"severity": "5"}); err == nil {
+		t.Error("severity 5: want error")
+	}
+	if _, err := severityArg(map[string]string{"severity": "abc"}); err == nil {
+		t.Error("severity abc: want error")
+	}
+}
+
+func TestBoolStr(t *testing.T) {
+	if got := boolStr(nil); got != "" {
+		t.Errorf("boolStr(nil) = %q, want ''", got)
+	}
+	v := true
+	if got := boolStr(&v); got != "true" {
+		t.Errorf("boolStr(true) = %q, want 'true'", got)
 	}
 }
