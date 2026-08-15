@@ -9,7 +9,7 @@ import (
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-func TestNewServerRegistersSevenPrompts(t *testing.T) {
+func TestNewServerRegistersEightPrompts(t *testing.T) {
 	cfg := &config.Config{BaseURL: "http://localhost:32569", ServerName: "test-server"}
 	client := historian.New(cfg.BaseURL, "u", "p", "/Historian/v2", nil)
 	srv := NewServer(cfg, client, nil, nil)
@@ -29,7 +29,7 @@ func TestNewServerRegistersSevenPrompts(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListPrompts: %v", err)
 	}
-	want := []string{"current_status", "tag_profiler", "tag_explorer", "trend_report", "compare_tags", "energy_usage", "batch_summary"}
+	want := []string{"current_status", "tag_profiler", "tag_explorer", "trend_report", "compare_tags", "energy_usage", "batch_summary", "alarm_review"}
 	if len(res.Prompts) != len(want) {
 		t.Fatalf("got %d prompts, want %d: %v", len(res.Prompts), len(want), res.Prompts)
 	}
