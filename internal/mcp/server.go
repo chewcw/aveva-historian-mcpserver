@@ -7,11 +7,13 @@ import (
 	"github.com/chewcw/aveva-historian-mcpserver/internal/config"
 	"github.com/chewcw/aveva-historian-mcpserver/internal/dataserver"
 	"github.com/chewcw/aveva-historian-mcpserver/internal/historian"
+	"github.com/chewcw/aveva-historian-mcpserver/internal/mcp/prompts"
 	"github.com/chewcw/aveva-historian-mcpserver/internal/mcp/tools"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// NewServer creates an MCP server with the four historian tools registered.
+// NewServer creates an MCP server with the four historian tools and the nine
+// historian prompts registered.
 func NewServer(cfg *config.Config, client *historian.Client, store *dataserver.Store, logger *slog.Logger) *mcp.Server {
 	if logger == nil {
 		logger = slog.Default()
@@ -24,5 +26,6 @@ func NewServer(cfg *config.Config, client *historian.Client, store *dataserver.S
 	tools.RegisterReadProcessValues(server, client, store, dataServerBaseURL, logger, limit)
 	tools.RegisterReadAnalogSummary(server, client, store, dataServerBaseURL, logger, limit)
 	tools.RegisterReadEvents(server, client, store, dataServerBaseURL, logger, limit)
+	prompts.RegisterPrompts(server, client, store, dataServerBaseURL, logger, limit)
 	return server
 }
