@@ -148,7 +148,7 @@ func fmtStr(p *string) string {
 	return *p
 }
 
-// RegisterPrompts registers all five historian prompts on the server.
+// RegisterPrompts registers all six historian prompts on the server.
 func RegisterPrompts(server *mcp.Server, client *historian.Client, store *dataserver.Store, dataServerBaseURL string, logger *slog.Logger, byteLimit int) {
 	logger = logger.With("feature", "prompts")
 	RegisterCurrentStatus(server, client, store, dataServerBaseURL, logger, byteLimit)
@@ -156,6 +156,7 @@ func RegisterPrompts(server *mcp.Server, client *historian.Client, store *datase
 	RegisterTagExplorer(server, client, store, dataServerBaseURL, logger, byteLimit)
 	RegisterTrendReport(server, client, store, dataServerBaseURL, logger, byteLimit)
 	RegisterCompareTags(server, client, store, dataServerBaseURL, logger, byteLimit)
+	RegisterEnergyUsage(server, client, store, dataServerBaseURL, logger, byteLimit)
 }
 
 // isValidRetrievalMode reports whether mode is a supported process-values mode.
