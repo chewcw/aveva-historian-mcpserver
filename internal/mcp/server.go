@@ -12,7 +12,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// NewServer creates an MCP server with the four historian tools and the five
+// NewServer creates an MCP server with the four historian tools and the nine
 // historian prompts registered.
 func NewServer(cfg *config.Config, client *historian.Client, store *dataserver.Store, logger *slog.Logger) *mcp.Server {
 	if logger == nil {

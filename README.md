@@ -123,6 +123,10 @@ Large results return a `ResourceLink` (up to 100 preview rows inline); fetch the
 | `tag_explorer` | Search/browse the tag catalog | `search`, `tag_type`, `source`, `top` |
 | `trend_report` | Stats + value trend for one tag over a range | `fqn`, `start_date_time`, `end_date_time`, `resolution_ms`, `retrieval_mode` |
 | `compare_tags` | Side-by-side stats for 2-10 tags | `fqn` (2-10), `start_date_time`, `end_date_time` |
+| `energy_usage` | Per-period integral (energy) for one tag | `fqn`, `start_date_time`, `end_date_time`, `resolution_ms` |
+| `batch_summary` | Per-batch statistics via slice_by tags | `fqn`, `start_date_time`, `end_date_time`, `slice_by`, `slice_by_value` |
+| `alarm_review` | Alarm counts and unacknowledged list for a window (default last 24h) | `start_date_time`, `end_date_time`, `severity`, `namespace`, `acknowledged` |
+| `daily_ops_summary` | One-day events digest + per-tag daily stats | `date`, `namespace`, `severity`, `fqns` |
 
 ## Data server
 
