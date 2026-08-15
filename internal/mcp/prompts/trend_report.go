@@ -63,30 +63,33 @@ func handleTrendReport(client *historian.Client, store *dataserver.Store, dataSe
 			mode = &v
 		}
 
-		baseConds := []types.FilterCondition{
+		// Summary query: single whole-range aggregate — FQN + range only.
+		// Resolution/RetrievalMode must NOT go here: the AnalogSummary endpoint
+		// only supports Cyclic|Full modes and per-cycle rows would make the
+		// stats block show only the first cycle.
+		summaryConds := []types.FilterCondition{
 			{Field: "FQN", Operator: "eq", Value: fqn},
-		}
-		if resolution != nil {
-			baseConds = append(baseConds, types.FilterCondition{Field: "Resolution", Operator: "eq", Value: *resolution})
-		}
-		if mode != nil {
-			baseConds = append(baseConds, types.FilterCondition{Field: "RetrievalMode", Operator: "eq", Value: *mode})
-		}
-
-		summaryConds := append([]types.FilterCondition{
 			{Field: "StartDateTime", Operator: "ge", Value: start},
 			{Field: "EndDateTime", Operator: "le", Value: end},
-		}, baseConds...)
+		}
 		summaryRes, err := endpoints.GetAnalogSummary(ctx, client,
 			[]types.FilterGroupDef{{And: summaryConds}}, types.QueryOptions{})
 		if err != nil {
 			return nil, fmt.Errorf("fetch analog summary: %w", err)
 		}
 
-		valueConds := append([]types.FilterCondition{
+		// Values query: FQN + range + optional Resolution / RetrievalMode.
+		valueConds := []types.FilterCondition{
+			{Field: "FQN", Operator: "eq", Value: fqn},
 			{Field: "DateTime", Operator: "ge", Value: start},
 			{Field: "DateTime", Operator: "le", Value: end},
-		}, baseConds...)
+		}
+		if resolution != nil {
+			valueConds = append(valueConds, types.FilterCondition{Field: "Resolution", Operator: "eq", Value: *resolution})
+		}
+		if mode != nil {
+			valueConds = append(valueConds, types.FilterCondition{Field: "RetrievalMode", Operator: "eq", Value: *mode})
+		}
 		top := 100
 		valuesRes, err := endpoints.GetProcessValues(ctx, client,
 			[]types.FilterGroupDef{{And: valueConds}}, types.QueryOptions{Top: &top})

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"strconv"
 	"strings"
 
 	"github.com/chewcw/aveva-historian-mcpserver/internal/dataserver"
@@ -28,7 +27,6 @@ func RegisterCompareTags(server *mcp.Server, client *historian.Client, store *da
 			{Name: "fqn", Description: "Comma-separated tag FQNs (2-10)", Required: true},
 			{Name: "start_date_time", Description: "Start of the range", Required: true},
 			{Name: "end_date_time", Description: "End of the range", Required: true},
-			{Name: "resolution_ms", Description: "Cycle resolution in ms (optional)"},
 		},
 	}, handleCompareTags(client, store, dataServerBaseURL, logger, byteLimit))
 }
@@ -58,14 +56,6 @@ func handleCompareTags(client *historian.Client, store *dataserver.Store, dataSe
 		if start > end {
 			return errResult("start_date_time must be before end_date_time"), nil
 		}
-		var resolution *int
-		if v := strings.TrimSpace(args["resolution_ms"]); v != "" {
-			n, err := strconv.Atoi(v)
-			if err != nil || n <= 0 {
-				return errResult("resolution_ms must be a positive integer"), nil
-			}
-			resolution = &n
-		}
 
 		rows := make([]historian.AnalogSummaryValue, 0, len(fqns))
 		for _, fqn := range fqns {
@@ -73,9 +63,6 @@ func handleCompareTags(client *historian.Client, store *dataserver.Store, dataSe
 				{Field: "FQN", Operator: "eq", Value: fqn},
 				{Field: "StartDateTime", Operator: "ge", Value: start},
 				{Field: "EndDateTime", Operator: "le", Value: end},
-			}
-			if resolution != nil {
-				conds = append(conds, types.FilterCondition{Field: "Resolution", Operator: "eq", Value: *resolution})
 			}
 			groups := []types.FilterGroupDef{{And: conds}}
 			result, err := endpoints.GetAnalogSummary(ctx, client, groups, types.QueryOptions{})

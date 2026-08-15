@@ -66,23 +66,66 @@ func TestCompareTagsNeedsTwoFqns(t *testing.T) {
 	}
 }
 
-func TestCompareTagsBadResolution(t *testing.T) {
+func TestCompareTagsTooManyFqns(t *testing.T) {
 	client := historian.New("http://unused", "", "", "", nil)
 	handler := handleCompareTags(client, nil, "", discardLogger(), 1_048_576)
+	fqns := "A,B,C,D,E,F,G,H,I,J,K" // 11
 	res, err := handler(context.Background(), &mcp.GetPromptRequest{
 		Params: &mcp.GetPromptParams{Arguments: map[string]string{
-			"fqn":             "A, B",
+			"fqn":             fqns,
 			"start_date_time": "2024-01-01T00:00:00Z",
 			"end_date_time":   "2024-01-01T01:00:00Z",
-			"resolution_ms":   "abc",
 		}},
 	})
 	if err != nil {
 		t.Fatalf("handler: %v", err)
 	}
 	tc, ok := res.Messages[0].Content.(*mcp.TextContent)
-	if !ok || !strings.Contains(tc.Text, "resolution_ms must be a positive integer") {
+	if !ok || !strings.Contains(tc.Text, "Too many FQNs") {
 		t.Errorf("unexpected message: %#v", res.Messages[0].Content)
+	}
+}
+
+func TestCompareTagsEmptySummary(t *testing.T) {
+	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"value":[]}`))
+	}))
+	defer mock.Close()
+	client := historian.New(mock.URL, "", "", "", nil)
+	handler := handleCompareTags(client, nil, "", discardLogger(), 1_048_576)
+	res, err := handler(context.Background(), &mcp.GetPromptRequest{
+		Params: &mcp.GetPromptParams{Arguments: map[string]string{
+			"fqn":             "A, B",
+			"start_date_time": "2024-01-01T00:00:00Z",
+			"end_date_time":   "2024-01-01T01:00:00Z",
+		}},
+	})
+	if err != nil {
+		t.Fatalf("handler: %v", err)
+	}
+	tc, ok := res.Messages[0].Content.(*mcp.TextContent)
+	if !ok || !strings.Contains(tc.Text, "No summary data found") {
+		t.Errorf("unexpected message: %#v", res.Messages[0].Content)
+	}
+}
+
+func TestCompareTagsEndpointError(t *testing.T) {
+	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`not json`))
+	}))
+	defer mock.Close()
+	client := historian.New(mock.URL, "", "", "", nil)
+	handler := handleCompareTags(client, nil, "", discardLogger(), 1_048_576)
+	if _, err := handler(context.Background(), &mcp.GetPromptRequest{
+		Params: &mcp.GetPromptParams{Arguments: map[string]string{
+			"fqn":             "A, B",
+			"start_date_time": "2024-01-01T00:00:00Z",
+			"end_date_time":   "2024-01-01T01:00:00Z",
+		}},
+	}); err == nil {
+		t.Fatal("expected error from failing endpoint")
 	}
 }
 

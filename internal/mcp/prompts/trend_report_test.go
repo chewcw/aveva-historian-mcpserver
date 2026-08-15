@@ -87,6 +87,40 @@ func TestTrendReportBadMode(t *testing.T) {
 	}
 }
 
+func TestTrendReportModeNotLeakedToSummary(t *testing.T) {
+	var summaryQuery, valuesQuery string
+	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if strings.HasSuffix(r.URL.Path, "/AnalogSummary") {
+			summaryQuery = r.URL.RawQuery
+			w.Write([]byte(`{"value":[{"FQN":"CDE.OEE","StartDateTime":"2024-01-01T00:00:00Z","EndDateTime":"2024-01-01T01:00:00Z","Minimum":90,"Maximum":99,"Average":95.5,"StandardDeviation":1.2,"Integral":1000,"Count":10,"First":95,"Last":96}]}`))
+			return
+		}
+		valuesQuery = r.URL.RawQuery
+		w.Write([]byte(`{"value":[{"FQN":"CDE.OEE","DateTime":"2024-01-01T00:00:00Z","Value":95.5,"OpcQuality":192,"Unit":"%"}]}`))
+	}))
+	defer mock.Close()
+
+	client := historian.New(mock.URL, "", "", "", nil)
+	handler := handleTrendReport(client, nil, "", discardLogger(), 1_048_576)
+	if _, err := handler(context.Background(), &mcp.GetPromptRequest{
+		Params: &mcp.GetPromptParams{Arguments: map[string]string{
+			"fqn":             "CDE.OEE",
+			"start_date_time": "2024-01-01T00:00:00Z",
+			"end_date_time":   "2024-01-01T01:00:00Z",
+			"retrieval_mode":  "Average",
+		}},
+	}); err != nil {
+		t.Fatalf("handler: %v", err)
+	}
+	if strings.Contains(summaryQuery, "RetrievalMode") {
+		t.Errorf("summary query must not contain RetrievalMode, got: %s", summaryQuery)
+	}
+	if !strings.Contains(valuesQuery, "RetrievalMode") {
+		t.Errorf("values query must contain RetrievalMode, got: %s", valuesQuery)
+	}
+}
+
 func TestTrendReportStartAfterEnd(t *testing.T) {
 	client := historian.New("http://unused", "", "", "", nil)
 	handler := handleTrendReport(client, nil, "", discardLogger(), 1_048_576)
