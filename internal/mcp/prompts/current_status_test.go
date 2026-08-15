@@ -1,0 +1,97 @@
+package prompts
+
+import (
+	"context"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/chewcw/aveva-historian-mcpserver/internal/dataserver"
+	"github.com/chewcw/aveva-historian-mcpserver/internal/historian"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
+)
+
+func TestCurrentStatusHappyPath(t *testing.T) {
+	var requests int
+	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"value":[{"FQN":"CDE.OEE","DateTime":"2024-01-01T00:00:00Z","Value":95.5,"OpcQuality":192,"Unit":"%"}]}`))
+	}))
+	defer mock.Close()
+
+	client := historian.New(mock.URL, "", "", "", nil)
+	store := dataserver.NewStore(time.Minute)
+	handler := handleCurrentStatus(client, store, "http://localhost:8199", discardLogger(), 1_048_576)
+	res, err := handler(context.Background(), &mcp.GetPromptRequest{
+		Params: &mcp.GetPromptParams{Arguments: map[string]string{"fqn": "CDE.OEE, CDE.PUMP"}},
+	})
+	if err != nil {
+		t.Fatalf("handler: %v", err)
+	}
+	if requests != 2 {
+		t.Errorf("want 2 endpoint calls (one per FQN), got %d", requests)
+	}
+	if len(res.Messages) != 2 { // preview + resource link
+		t.Fatalf("want 2 messages, got %d", len(res.Messages))
+	}
+	tc, ok := res.Messages[0].Content.(*mcp.TextContent)
+	if !ok || !strings.Contains(tc.Text, "95.5") {
+		t.Errorf("preview missing value: %#v", res.Messages[0].Content)
+	}
+	rl, ok := res.Messages[1].Content.(*mcp.ResourceLink)
+	if !ok || !strings.HasPrefix(rl.URI, "http://localhost:8199/resources/") {
+		t.Errorf("missing resource link: %#v", res.Messages[1].Content)
+	}
+}
+
+func TestCurrentStatusTooManyFqns(t *testing.T) {
+	client := historian.New("http://unused", "", "", "", nil)
+	handler := handleCurrentStatus(client, nil, "", discardLogger(), 1_048_576)
+	fqns := "A,B,C,D,E,F,G,H,I,J,K" // 11
+	res, err := handler(context.Background(), &mcp.GetPromptRequest{
+		Params: &mcp.GetPromptParams{Arguments: map[string]string{"fqn": fqns}},
+	})
+	if err != nil {
+		t.Fatalf("handler: %v", err)
+	}
+	tc, ok := res.Messages[0].Content.(*mcp.TextContent)
+	if !ok || !strings.Contains(tc.Text, "Too many FQNs") {
+		t.Errorf("unexpected message: %#v", res.Messages[0].Content)
+	}
+}
+
+func TestCurrentStatusMissingFqn(t *testing.T) {
+	client := historian.New("http://unused", "", "", "", nil)
+	handler := handleCurrentStatus(client, nil, "", discardLogger(), 1_048_576)
+	res, err := handler(context.Background(), &mcp.GetPromptRequest{})
+	if err != nil {
+		t.Fatalf("handler: %v", err)
+	}
+	tc, ok := res.Messages[0].Content.(*mcp.TextContent)
+	if !ok || !strings.Contains(tc.Text, "Missing required argument: fqn") {
+		t.Errorf("unexpected message: %#v", res.Messages[0].Content)
+	}
+}
+
+func TestCurrentStatusNoValues(t *testing.T) {
+	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"value":[]}`))
+	}))
+	defer mock.Close()
+	client := historian.New(mock.URL, "", "", "", nil)
+	handler := handleCurrentStatus(client, nil, "", discardLogger(), 1_048_576)
+	res, err := handler(context.Background(), &mcp.GetPromptRequest{
+		Params: &mcp.GetPromptParams{Arguments: map[string]string{"fqn": "NOPE"}},
+	})
+	if err != nil {
+		t.Fatalf("handler: %v", err)
+	}
+	tc, ok := res.Messages[0].Content.(*mcp.TextContent)
+	if !ok || !strings.Contains(tc.Text, "No values found") {
+		t.Errorf("unexpected message: %#v", res.Messages[0].Content)
+	}
+}
